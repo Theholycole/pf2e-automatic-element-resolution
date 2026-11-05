@@ -1,0 +1,10 @@
+.pf2e-elements-card header { margin-bottom: 0.25rem; }
+.pf2e-elements-card p { margin: 0.25rem 0; }
+.pf2e-elements-note { font-size: 0.85em; opacity: 0.85; }
+.pf2e-elements-targets { width: 100%; margin: 0.25rem 0; }
+.pf2e-elements-targets tr.applied { opacity: 0.6; }
+.pf2e-elements-apply { width: 100%; margin-top: 0.25rem; }
+.pf2e-elements-paint { display: flex; flex-direction: column; gap: 0.25rem; }
+.pf2e-elements-paint button { display: flex; align-items: center; gap: 0.5rem; justify-content: flex-start; }
+.pf2e-elements-paint button.active { outline: 2px solid var(--color-warm-2, #ff6400); }
+.pf2e-elements-swatch { width: 1rem; height: 1rem; border-radius: 3px; border: 1px solid rgba(0, 0, 0, 0.4); }

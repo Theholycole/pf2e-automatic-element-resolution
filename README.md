@@ -1,0 +1,104 @@
+# PF2e Automatic Element Resolution
+
+This Foundry VTT module for PF2e makes the battlefield react to elements. Everything it does is homebrew.
+
+## Surfaces
+
+Open **Paint surfaces** from the token tools, pick a material, and click or drag on the scene. The materials are water, metal, oil, plants, ice, burning ground and steam. Touching squares of one material count as one body.
+
+## Reactions
+
+When an element touches a surface or a creature, a card proposes what happens. Each creature rolls its own save from the card, and the GM's Apply does the rest.
+
+| Element | Touches | What happens |
+| --- | --- | --- |
+| Electricity | Water or metal | Half the damage to everyone else on it within 30 feet, basic Reflex; −1 in metal armor |
+| Fire | Oil | It burns: environmental damage, basic Reflex, 1d6 persistent fire on a failure |
+| Fire | Plants | It burns |
+| Fire | Water | It boils into steam |
+| Fire | Ice | It melts to water |
+| Water | Burning ground | The fire goes out and leaves water |
+| Cold | Burning ground | The fire goes out |
+| Cold | Water | It freezes; Reflex or immobilized for those standing in it |
+| Air | Steam | It blows away |
+| Water | A creature | Wet: fire resistance 2, −1 to saves against electricity, for 1 minute |
+| Fire | A wet creature | It dries off |
+| Cold | A wet creature | Reflex, or −10 feet of Speed for a round (immobilized on a critical failure) |
+
+Fliers don't touch the ground's surfaces. Reach, lightning's share, burning ground's damage and the DC on surfaces are world settings.
+
+Air also blows out fire and dries mud. From the element chart: earth turns water to mud, smothers fire and crushes ice to rubble; plants drink up water and mud; water grows plants into a thicket; cold and poison kill plants back; metal and sonic shatter ice; acid eats metal; light and darkness cancel each other; light and vitality clear deathly ground; void and darkness wither living ground. A world setting lets the chart decide pairs with no reaction of their own.
+
+## What surfaces do
+
+| Surface | While it's there |
+| --- | --- |
+| Ice | GM Core's ice: difficult terrain, off-guard, Balance to move on it |
+| Plants | GM Core's light undergrowth: difficult terrain, and a creature can Take Cover |
+| Oil | Grease: Balance to move onto it, with Reflex or Acrobatics, unless it Steps or Crawls |
+| Steam | Mist: concealed inside it |
+| Burning ground | Fire damage on entering and at each turn's start, and 1d6 persistent fire (a card each time) |
+| Thicket | GM Core's heavy undergrowth: greater difficult terrain and cover |
+| Mud | GM Core's shallow bog: difficult terrain |
+| Rubble | GM Core's rubble: difficult terrain |
+| Darkness | Concealed inside it |
+| Deathly ground | Void damage on entering and at each turn's start (a card each time; the undead aren't affected) |
+| Living ground | Fast healing 1 inside it |
+| Water, metal, light | Nothing until an element touches them |
+
+Painting oil where a creature stands gives it a card: Reflex or Acrobatics, or fall prone, as Grease.
+
+## Each round
+
+When a combat's round ends, the GM gets one card for what the ground does:
+
+- Fire burns out after 3 rounds, puddles dry after 10, and steam fades after 2.
+- Each burning square has a DC 11 flat check to catch each square of oil or plants next to it.
+
+Tick **Stays until something changes it** when painting something permanent, like a stream, and it won't run out. The numbers are world settings. Time only passes in combat.
+
+Water effects' cards offer **Leave a puddle**.
+
+## Creatures change the ground
+
+A creature carries an element if it has that trait, or persistent damage of that type. Each square it moves through or starts its turn on reacts: a fire creature or a burning one lights plants and oil, boils water and melts ice, while bare ground doesn't change. Fliers leave the ground alone. It happens on its own unless someone else has to roll, and a world setting makes it ask first.
+
+## With the environment module
+
+It's optional. When it's on:
+
+- Its heavy rain soaks unsheltered creatures, which stay Wet while it lasts, and any wet precipitation puts out fires at the end of the round and stops them spreading (GM Core: wet precipitation douses flames).
+- Heavy rain or worse also leaves puddles on bare squares each round (3 by default, a world setting), on the round's card.
+- Rain only falls under the sky: squares open to the map's edge past the walls, and not in Foundry's Suppress Weather regions. Inside, creatures stay dry and fires keep burning. A map walled right round counts as indoors.
+- Its terrain counts as surfaces: ice, undergrowth and hedges, and flames can change, with a hole cut in its region where they do. Its deep and flowing water conducts lightning but doesn't change.
+
+See `docs/design.md` for how it works.
+
+## Weakness to the ground
+
+A creature weak to a surface's trait takes damage equal to that weakness when it moves through the surface or starts its turn there, on a card (its highest such weakness, once per move or turn). Personal Rain Cloud does the same for water; extending it to every surface is homebrew.
+
+| Surface | Traits |
+| --- | --- |
+| Water, steam | Water |
+| Ice | Cold, water |
+| Mud | Water, earth |
+| Rubble | Earth |
+| Plants, thicket | Plant, wood |
+| Metal | Metal |
+| Light | Light |
+| Living ground | Vitality |
+
+Burning and deathly ground deal fire and void damage, so PF2e applies those weaknesses itself.
+
+## Undoing a move
+
+Ctrl-Z on a move puts back the squares a creature's trail changed and removes that move's unapplied cards. Damage and conditions already applied stay, and the record of moves lasts until the page reloads.
+
+## Credits
+
+Elemental interactions adapted from Battlezoo Eldamon (Pathfinder) © 2024, Skyscraper Studios, Inc.; Author: Mark Seifter. Used under the ORC License. This module contains none of its text or art.
+
+## Install
+
+It needs [PF2e Automation Core](https://github.com/Theholycole/PF2e-Automation-Core) 0.7.8 or later.
