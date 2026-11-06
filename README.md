@@ -29,7 +29,7 @@ When an element touches a surface or a creature, a card proposes what happens. E
 
 To hit the ground with something single-target, like a Strike or a one-target spell, use **Aim at the ground** on its damage roll or its card, then click a square. Only that square reacts to its element, even with nobody standing on it. Range isn't checked, and neither is the attack roll: that's the GM's call. Escape cancels.
 
-A single-target attack or ability only changes the squares it touches, whether it's aimed at the ground or hits a creature standing there. An area's effect changes all of what it touches. Two things still spread from one square: lightning through water or metal, and lit oil, which goes up all at once.
+An element only changes the squares it touches: the one it's aimed at, those under a creature it hits, or those its area covers. Three things spread from there: lightning through water or metal, fire through oil, which goes up all at once, and a poison cloud that explodes.
 
 Fliers don't touch the ground's surfaces. Reach, lightning's share, burst damage and the DC on surfaces are world settings.
 
@@ -104,7 +104,7 @@ A forced move that begins on ice goes as far again, on a card. A GM's drag of a 
 
 ## Clouds and air
 
-Ember, poison, death, frost and dust clouds and steam sit at every height and fade after 3 rounds (a world setting). Air moves a cloud 10 feet away from its source, or scatters it if there isn't one, and the environment module's wind carries them each round. Water turns embers to steam, fire explodes a poison cloud, and life or healing clears a death cloud. A gale is difficult terrain for fliers and −1 to ranged attacks from inside it.
+Ember, poison, death, frost and dust clouds and steam sit at every height and fade after 3 rounds (a world setting). Air moves the part of a cloud it touches 10 feet away from its source, or scatters that part if there isn't one, and the environment module's wind carries them each round. Water turns embers to steam, fire explodes a poison cloud, and life or healing clears a death cloud. A gale is difficult terrain for fliers and −1 to ranged attacks from inside it.
 
 ## Leaving surfaces, Sow and Harvest
 

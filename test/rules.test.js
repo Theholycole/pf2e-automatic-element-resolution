@@ -77,7 +77,7 @@ test("fire lights all of a slick, whoever's there saves, and it stays Burning", 
 });
 
 test("the ground's changes: boil, melt, douse, freeze, smother, disperse", () => {
-    const on = (element, material) => surfacePlans({ elements: [{ element, amount: 0 }], contact: [squareKey(0, 0)], surfaces: [{ id: "s", material, squares: row(0, 0, 1) }], creatures: [goblin("in", 1)], dc: 18 })[0];
+    const on = (element, material) => surfacePlans({ elements: [{ element, amount: 0 }], contact: [squareKey(0, 0)], surfaces: [{ id: "s", material, squares: row(0, 0, 1) }], creatures: [goblin("in", 0), goblin("next", 1)], dc: 18 })[0];
     assert.equal(on("fire", "water").to, "steam");
     assert.equal(on("fire", "ice").to, "water");
     assert.equal(on("fire", "plants").to, "burning");
@@ -364,8 +364,8 @@ test("new ground and clouds react as written", () => {
 test("a cloud: air moves it away from the source; with no source it scatters", () => {
     const cloud = { material: "embers", squares: ["5,0", "6,0"] };
     const [moved] = surfacePlans({ elements: [{ element: "air", amount: 0 }], contact: ["5,0"], surfaces: [cloud], creatures: [], source: { x: 0, y: 0 } });
-    assert.deepEqual(moved.changes[0], { material: "embers", to: null, keys: ["5,0", "6,0"], words: "" });
-    assert.deepEqual(moved.changes[1].keys, ["7,0", "8,0"]);
+    assert.deepEqual(moved.changes[0], { material: "embers", to: null, keys: ["5,0"], words: "" });
+    assert.deepEqual(moved.changes[1].keys, ["7,0"]);
     assert.equal(surfacePlans({ elements: [{ element: "air", amount: 0 }], contact: ["5,0"], surfaces: [cloud], creatures: [] })[0].to, null);
 });
 
@@ -501,13 +501,13 @@ test("hover info: a surface's rules, its traits and what elements do to it", () 
     assert.ok(surfaceInfo("water").reactions.includes("Cold: ice"));
 });
 
-test("a single-target attack changes only the square it touches; lightning and lit oil still spread", () => {
+test("an element changes only the squares it touches; lightning and lit oil still spread", () => {
     const line = (material) => [{ id: "s", material, squares: ["0,0", "1,0", "2,0"] }];
-    const aimed = (element, material, creatures = []) => surfacePlans({ elements: [{ element, amount: 10 }], contact: ["1,0"], surfaces: line(material), creatures, dc: 20, hazardFormula: "2d6", aimed: true });
+    const aimed = (element, material, creatures = []) => surfacePlans({ elements: [{ element, amount: 10 }], contact: ["1,0"], surfaces: line(material), creatures, dc: 20, hazardFormula: "2d6" });
     assert.deepEqual(aimed("fire", "plants")[0].squares, ["1,0"]);
     assert.deepEqual(aimed("cold", "water")[0].squares, ["1,0"]);
     assert.equal(aimed("fire", "oil")[0].squares.length, 3, "lit oil goes up all at once");
     const other = { id: "o", squares: ["2,0"], elevation: 0 };
     assert.deepEqual(aimed("electricity", "water", [other])[0].targets, ["o"], "lightning runs through it");
-    assert.equal(surfacePlans({ elements: [{ element: "fire", amount: 10 }], contact: ["1,0"], surfaces: line("plants"), dc: 20 })[0].squares.length, 3, "an area's effect still takes all of it");
+    assert.equal(surfacePlans({ elements: [{ element: "fire", amount: 10 }], contact: ["0,0", "1,0"], surfaces: line("plants"), dc: 20 })[0].squares.length, 2, "an area only takes what it covers");
 });
