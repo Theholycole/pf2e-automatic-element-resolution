@@ -3,7 +3,7 @@
 
 import { MODULE_ID, STATE_EFFECTS, WET_SLUG, creatureOf, isCreatureActor, squareAt } from "./foundry.js";
 import { environmentMaterial, openSquares, squareKey, squareOf } from "../src/surfaces.js";
-import { WEATHER } from "../../pf2e-resolution-core/src/environment/catalog.js";
+import { DIRECTIONS, WEATHER } from "../../pf2e-resolution-core/src/environment/catalog.js";
 import { normalizeState, soaked } from "../../pf2e-resolution-core/src/environment/weather.js";
 
 export const ENVIRONMENT_ID = "pf2e-automatic-environment-resolution";
@@ -76,6 +76,23 @@ export function skySquares(scene) {
     const roofs = [...scene.regions].filter((region) => [...region.behaviors].some((behavior) => behavior.type === "suppressWeather" && !behavior.disabled));
     for (const region of roofs) for (const key of [...open]) if (region.testPoint(middle(key))) open.delete(key);
     return open;
+}
+
+// What the weather does to the ground each round: rain as before; wind drifts clouds; snow or bitter cold freezes standing water under the sky; heat dries it twice as fast.
+const COLD_TEMPERATURES = new Set(["incredible-cold", "extreme-cold", "severe-cold"]);
+const HOT_TEMPERATURES = new Set(["incredible-heat", "extreme-heat", "severe-heat"]);
+export function groundWeather(scene) {
+    const state = normalizeState(environmentData(scene).state ?? {});
+    const sky = skySquares(scene);
+    const precipitation = state.precipitation;
+    const direction = state.wind ? DIRECTIONS[state.wind.direction] : null;
+    return {
+        rain: precipitation && WEATHER.precipitation.kinds[precipitation.kind]?.wet ? sky : false,
+        freezing: precipitation?.kind === "snow" || COLD_TEMPERATURES.has(state.temperature) ? sky : null,
+        wind: direction ? { dx: direction[0], dy: direction[1] } : null,
+        hot: HOT_TEMPERATURES.has(state.temperature),
+        thunderstorm: Boolean(state.thunderstorm)
+    };
 }
 
 // Wet precipitation falling on the scene (GM Core: it douses flames).

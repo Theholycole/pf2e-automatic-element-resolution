@@ -4,7 +4,7 @@ This Foundry VTT module for PF2e makes the battlefield react to elements. Everyt
 
 ## Surfaces
 
-Open **Paint surfaces** from the token tools, pick a material, and click or drag on the scene. The materials are water, metal, oil, plants, ice, burning ground and steam. Touching squares of one material count as one body.
+Open **Elements** from the token tools, pick a surface, and click or drag on the scene. Touching squares of one material count as one body.
 
 ## Reactions
 
@@ -44,7 +44,15 @@ Air also blows out fire and dries mud. From the element chart: earth turns water
 | Darkness | Concealed inside it |
 | Deathly ground | Void damage on entering and at each turn's start (a card each time; the undead aren't affected) |
 | Living ground | Fast healing 1 inside it |
-| Water, metal, light | Nothing until an element touches them |
+| Light | Limned inside it: it can't be concealed |
+| Sand, snow | GM Core: difficult terrain |
+| Brambles, broken glass | Piercing damage for each move into it; brambles are difficult terrain too |
+| Tall grass, dust cloud | Concealed inside it |
+| Flowers | Fast healing 1 inside it |
+| Lava | Double fire damage on entering and at each turn's start, and 2d6 persistent fire |
+| Acid pool, ember, poison, death and frost clouds | Damage of that type on entering and at each turn's start; frost fog conceals too |
+| Gale | Difficult terrain for fliers, −1 to ranged attacks from inside |
+| Water, metal | Nothing until an element touches them |
 
 Painting oil where a creature stands gives it a card: Reflex or Acrobatics, or fall prone, as Grease.
 
@@ -74,6 +82,37 @@ It's optional. When it's on:
 
 See `docs/design.md` for how it works.
 
+## States that reward setting things up
+
+- **Oil:** moving through oil, starting a turn in it, or having it painted under you adds a stack. A stack of any size is a −5-foot status penalty to Speeds. The next fire damage turns every stack into 1d6 persistent fire each, so 3 stacks is 3d6. Water washes it off. Grease and thrown Oil (1 pint) both make it.
+- **Wet + lightning:** a Wet creature takes double conducted damage, and anyone who fails is Shocked (−2 to AC and saves against electricity for 2 rounds).
+- **Wet + cold:** Reflex, or Frozen 1, 2 or 4 by degree. Frozen is a −5-foot status penalty to Speeds per point; an Interact lowers it by 4, and fire thaws it at once.
+- **Light:** Limned, so it can't be concealed.
+
+## Forced movement on ice
+
+A forced move that begins on ice goes as far again, on a card. A GM's drag of a creature out of its turn gets the card too, in case it was forced.
+
+## Clouds and air
+
+Ember, poison, death, frost and dust clouds and steam sit at every height and fade after 3 rounds (a world setting). Air moves a cloud 10 feet away from its source, or scatters it if there isn't one, and the environment module's wind carries them each round. Water turns embers to steam, fire explodes a poison cloud, and life or healing clears a death cloud. A gale is difficult terrain for fliers and −1 to ranged attacks from inside it.
+
+## Leaving surfaces, Sow and Harvest
+
+An area effect's card offers to leave its element's surface: Sow for wood and plants, rubble for earth, ice for cold, and so on. This works for any spell with the trait. A wood or plant effect on standing plants offers Harvest: thorns burst from them for piercing damage, basic Reflex, and the plants are gone. **Items** makes Sowing Seeds, a Harvest Charm and a flask for each surface.
+
+## Objects
+
+**Objects** has a barrel and something natural for each of 15 elements, like an oil barrel and a pitch pine, or a poison barrel and a choke fungus. Each is a PF2e hazard with Hardness and Hit Points. It bursts when destroyed or when the right element reaches it: basic Reflex for those nearby, and it leaves its surface. A burst can set off the next object.
+
+## Elemental weather
+
+**Weather** picks lightning, meteors, hail, acid rain, whirlwinds, tremors, thorns, poison, death, sunbeams or a firestorm. Each new round, marked squares under the sky are hit and new ones are marked, so everyone has a round to get clear or lure someone in. The environment module's thunderstorm brings lightning by itself. Snow and severe cold freeze standing water, severe heat dries it twice as fast, and a firestorm's fires don't burn out.
+
+## Elemental fields
+
+**Fields** covers the whole scene or a marked area you paint. Inside, an element's effects deal half your level (at least 1) more as a status bonus, and you get that much resistance to it where PF2e has that damage type. Fields can cycle through elements every few rounds, so holding the right ground is worth fighting for.
+
 ## Weakness to the ground
 
 A creature weak to a surface's trait takes damage equal to that weakness when it moves through the surface or starts its turn there, on a card (its highest such weakness, once per move or turn). Personal Rain Cloud does the same for water; extending it to every surface is homebrew.
@@ -88,6 +127,11 @@ A creature weak to a surface's trait takes damage equal to that weakness when it
 | Metal | Metal |
 | Light | Light |
 | Living ground | Vitality |
+| Sand | Earth |
+| Snow, frost fog | Cold, water |
+| Brambles, tall grass, flowers | Plant, wood |
+| Gale | Air |
+| Dust cloud | Earth, air |
 
 Burning and deathly ground deal fire and void damage, so PF2e applies those weaknesses itself.
 

@@ -10,7 +10,10 @@ import { categoryDice } from "../../pf2e-resolution-core/src/environment/catalog
 export const MODULE_ID = "pf2e-automatic-element-resolution";
 const SURFACE = "surface";
 export const WET_SLUG = "elements-wet";
-export const CHILLED_SLUG = "elements-chilled";
+export const OIL_SLUG = "elements-oil";
+export const FROZEN_SLUG = "elements-frozen";
+export const SHOCKED_SLUG = "elements-shocked";
+export const LIMNED_SLUG = "elements-limned";
 
 export const escapeHTML = (text) => String(text ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 export const isActiveGM = () => game.users.activeGM?.isSelf ?? game.user.isGM;
@@ -26,10 +29,13 @@ export function registerSettings() {
     game.settings.register(MODULE_ID, "askTrails", { name: "Ask before a creature changes the ground", hint: "Off: grass catches under a fire creature on its own, with a card only when someone else has to roll. On: a card each time.", scope: "world", config: true, type: Boolean, default: false });
     game.settings.register(MODULE_ID, "matchups", { name: "Let the element chart decide unlisted pairs", hint: "When no reaction covers an element on a surface and the surface's element is weak to it, the touched squares give way.", scope: "world", config: true, type: Boolean, default: false });
     game.settings.register(MODULE_ID, "rainPuddles", { name: "Puddles from soaking rain", hint: "New puddles each round in heavy rain or worse, on bare squares. 0: none.", scope: "world", config: true, type: Number, default: 3 });
+    game.settings.register(MODULE_ID, "cloudRounds", { name: "Rounds until a cloud fades", hint: "Ember, poison, death, frost and dust clouds, and gales. 0: never.", scope: "world", config: true, type: Number, default: 3 });
+    game.settings.register(MODULE_ID, "offerSurfaces", { name: "Offer to leave a surface", hint: "An area effect's card can leave its element's surface behind.", scope: "world", config: true, type: Boolean, default: true });
     game.settings.register(MODULE_ID, "surfaceDC", { name: "DC for checks on surfaces", hint: "For Balance on ice and oil. 0: GM Core's DC for the creature's level.", scope: "world", config: true, type: Number, default: 0 });
 }
 export const ruleSettings = () => ({ conductReach: game.settings.get(MODULE_ID, "conductReach"), conductFraction: game.settings.get(MODULE_ID, "conductFraction"), matchups: game.settings.get(MODULE_ID, "matchups") });
-export const tickSettings = () => ({ lives: { water: game.settings.get(MODULE_ID, "waterRounds"), steam: game.settings.get(MODULE_ID, "steamRounds"), burning: game.settings.get(MODULE_ID, "burningRounds") }, spreadDC: game.settings.get(MODULE_ID, "spreadDC") });
+const CLOUDS = ["embers", "toxic", "miasma", "frostfog", "dust", "gale"];
+export const tickSettings = () => ({ lives: { water: game.settings.get(MODULE_ID, "waterRounds"), steam: game.settings.get(MODULE_ID, "steamRounds"), burning: game.settings.get(MODULE_ID, "burningRounds"), ...Object.fromEntries(CLOUDS.map((cloud) => [cloud, game.settings.get(MODULE_ID, "cloudRounds")])) }, spreadDC: game.settings.get(MODULE_ID, "spreadDC") });
 
 const squareOfPoint = (scene, x, y) => {
     const size = scene.grid.size;
@@ -99,6 +105,9 @@ export async function paintSquares(scene, keys, material, { lasting = false } = 
     await writeSquares(scene, material, [...(here?.squares ?? []), ...keys], { ages, lasting: lasting ? [...stays, ...keys] : stays });
 }
 
+// Those a move or a paint has just covered in oil pick up a stack.
+export const coreForcedMove = () => game.modules.get("pf2e-resolution-core")?.api?.forcedMovement?.forcedMove ?? null;
+
 // A round's new ages, on each material: { material: { key: rounds } }.
 export async function writeAges(scene, ages) {
     for (const region of surfaceRegions(scene)) {
@@ -108,6 +117,8 @@ export async function writeAges(scene, ages) {
 }
 
 const METAL_GROUPS = new Set(["chain", "composite", "plate"]);
+
+const stateOf = (actor, slug) => actor?.itemTypes?.effect?.find((effect) => effect.slug === slug) ?? null;
 
 // A token as the rules see it: { id, name, squares, elevation, metalArmor, wet }.
 export function creatureOf(token) {
@@ -126,29 +137,47 @@ export function creatureOf(token) {
         squares,
         elevation: stored.elevation ?? 0,
         metalArmor: METAL_GROUPS.has(actor?.wornArmor?.group),
-        wet: Boolean(actor?.itemTypes?.effect?.some((effect) => effect.slug === WET_SLUG))
+        wet: Boolean(stateOf(actor, WET_SLUG)),
+        limned: Boolean(stateOf(actor, LIMNED_SLUG)),
+        oil: stateOf(actor, OIL_SLUG)?.system?.badge?.value ?? 0,
+        frozen: stateOf(actor, FROZEN_SLUG)?.system?.badge?.value ?? 0
     };
 }
+// With no source to take a DC from: GM Core's DC for the highest level on the scene.
+export const sceneDC = (scene) => surfaceDC({ level: Math.max(0, ...[...scene.tokens].filter((token) => isCreatureActor(token.actor) && !token.actor.flags?.[MODULE_ID]?.object).map((token) => token.actor.level ?? 0)) });
+
 export const isCreatureActor = (actor) => Boolean(actor?.isOfType?.("creature"));
 export const creaturesOf = (scene) => [...scene.tokens].filter((token) => token.actor?.isOfType?.("creature")).map(creatureOf);
 
 // The source's DC: its spell's, then its class's, then GM Core's for its level.
 export function dcFrom(actor, item) {
+    if (!actor) return null;
     return item?.spellcasting?.statistic?.dc?.value ?? actor?.classDC?.dc?.value ?? actor?.spellDC?.value ?? levelDC(actor?.level ?? 0);
 }
 
 // The damage a roll holds: [{ type, total, persistent }].
 export const damageOf = (roll) => (roll?.instances ?? []).map((instance) => ({ type: instance.type, total: instance.total, persistent: Boolean(instance.persistent) }));
 
-const effect = (name, slug, img, duration, rules, description) => ({ name, type: "effect", img, flags: { [MODULE_ID]: { state: slug } }, system: { slug, duration, rules, description: { value: `<p>${description}</p>` } } });
+const effect = (name, slug, img, duration, rules, description, badge = null) => ({ name, type: "effect", img, flags: { [MODULE_ID]: { state: slug } }, system: { slug, duration, rules, ...(badge ? { badge } : {}), description: { value: `<p>${description}</p>` } } });
+const UNLIMITED = { value: -1, unit: "unlimited", expiry: null, sustained: false };
 
-// (Personal Rain Cloud gives fire resistance 2 at rank 1.)
+// (Personal Rain Cloud gives fire resistance 2 at rank 1. Oil's stacks, frozen's value, shocked and limned are homebrew, the last three after Battlezoo Eldamon's conditions.)
 export const STATE_EFFECTS = {
     wet: effect("Wet", WET_SLUG, "icons/magic/water/water-drop-swirl-blue.webp", { value: 1, unit: "minutes", expiry: "turn-start", sustained: false }, [
         { key: "Resistance", type: "fire", value: 2 },
         { key: "FlatModifier", selector: "saving-throw", type: "circumstance", value: -1, label: "Wet", predicate: ["item:trait:electricity"] }
-    ], "Soaked through: fire resistance 2, and &minus;1 circumstance to saves against electricity. Homebrew."),
-    chilled: effect("Chilled", CHILLED_SLUG, "icons/magic/water/snowflake-ice-blue.webp", { value: 1, unit: "rounds", expiry: "turn-end", sustained: false }, [
-        { key: "FlatModifier", selector: "all-speeds", type: "status", value: -10, label: "Chilled" }
-    ], "Wet and freezing: &minus;10-foot status penalty to Speeds. Homebrew.")
+    ], "Soaked through: fire resistance 2, and &minus;1 circumstance to saves against electricity. Lightning through water hits it for double. Cold can freeze it. Homebrew."),
+    oil: effect("Oil", OIL_SLUG, "icons/consumables/potions/potion-tube-corked-orange.webp", UNLIMITED, [
+        { key: "FlatModifier", selector: "all-speeds", type: "status", value: -5, label: "Oil" }
+    ], "Covered in oil: &minus;5-foot status penalty to Speeds, however much of it there is. The next fire damage turns each stack into 1d6 persistent fire damage. Water washes it off. Homebrew.", { type: "counter", value: 1, min: 1, max: 20 }),
+    frozen: effect("Frozen", FROZEN_SLUG, "icons/magic/water/snowflake-ice-blue.webp", UNLIMITED, [
+        { key: "FlatModifier", selector: "all-speeds", type: "status", value: "-5*@item.badge.value", label: "Frozen" }
+    ], "Slowly freezing over: &minus;5-foot status penalty to Speeds for each point. It or an adjacent ally can spend an Interact action to lower this by 4. Fire thaws it at once. Homebrew.", { type: "counter", value: 1, min: 1, max: 10 }),
+    shocked: effect("Shocked", SHOCKED_SLUG, "icons/magic/lightning/bolt-strike-blue.webp", { value: 2, unit: "rounds", expiry: "turn-end", sustained: false }, [
+        { key: "FlatModifier", selector: "ac", type: "circumstance", value: -2, label: "Shocked", predicate: ["origin:item:trait:electricity"] },
+        { key: "FlatModifier", selector: "saving-throw", type: "circumstance", value: -2, label: "Shocked", predicate: ["item:trait:electricity"] }
+    ], "Charged with electricity: &minus;2 circumstance to AC and saves against electricity. Homebrew."),
+    limned: effect("Limned", LIMNED_SLUG, "icons/magic/light/explosion-star-glow-yellow.webp", { value: 2, unit: "rounds", expiry: "turn-end", sustained: false }, [
+        { key: "Note", selector: "ac", title: "Limned", text: "Outlined in light: it can't be concealed." }
+    ], "Outlined in light: it can't be concealed. Homebrew.")
 };

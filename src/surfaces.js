@@ -11,18 +11,33 @@ export const SURFACES = {
     rubble: { label: "Rubble", color: "#857a6c" },
     ice: { label: "Ice", color: "#9fd8ee" },
     burning: { label: "Burning", color: "#e0602a" },
-    steam: { label: "Steam", color: "#d7dde2", cloud: true },
+    steam: { label: "Steam", color: "#d7dde2", cloud: true, drifts: true },
     darkness: { label: "Darkness", color: "#1d1a2e", cloud: true },
     light: { label: "Light", color: "#f3e7a1", cloud: true },
     death: { label: "Deathly ground", color: "#54495c" },
-    life: { label: "Living ground", color: "#b7e38f" }
+    life: { label: "Living ground", color: "#b7e38f" },
+    sand: { label: "Sand", color: "#d8c48a" },
+    snow: { label: "Snow", color: "#eef3f7" },
+    glass: { label: "Broken glass", color: "#a8d6d3" },
+    bramble: { label: "Brambles", color: "#54662c", flammable: true },
+    grass: { label: "Tall grass", color: "#7fa84a", flammable: true },
+    flowers: { label: "Flowers", color: "#d98cc2", flammable: true },
+    lava: { label: "Lava", color: "#c4391d" },
+    acid: { label: "Acid pool", color: "#9bbf2f" },
+    gale: { label: "Gale", color: "#bcd6e6", cloud: true },
+    embers: { label: "Ember cloud", color: "#d9772b", cloud: true, drifts: true },
+    toxic: { label: "Poison cloud", color: "#7c9a3a", cloud: true, drifts: true },
+    miasma: { label: "Death cloud", color: "#5d5266", cloud: true, drifts: true },
+    frostfog: { label: "Frost fog", color: "#c5e3f0", cloud: true, drifts: true },
+    dust: { label: "Dust cloud", color: "#b5a58a", cloud: true, drifts: true }
 };
 
 // The traits a surface shares with a creature's weakness, among PF2e's weakness types. Burning and deathly ground aren't here: their damage
 // is already fire and void, and PF2e applies those weaknesses itself.
 export const SURFACE_TRAITS = {
     water: ["water"], steam: ["water"], ice: ["cold", "water"], mud: ["water", "earth"], rubble: ["earth"], plants: ["plant", "wood"], thicket: ["plant", "wood"],
-    metal: ["metal"], light: ["light"], life: ["vitality"]
+    metal: ["metal"], light: ["light"], life: ["vitality"], sand: ["earth"], snow: ["cold", "water"], bramble: ["plant", "wood"], grass: ["plant", "wood"], flowers: ["plant", "wood"],
+    gale: ["air"], frostfog: ["cold", "water"], dust: ["earth", "air"]
 };
 
 // The environment module's terrain, by its feature's key. Fixed: deep or flowing water, which conducts but doesn't boil or freeze away.
@@ -30,7 +45,12 @@ const ENVIRONMENT_FEATURES = {
     ice: { material: "ice" },
     "undergrowth-light": { material: "plants" },
     "undergrowth-heavy": { material: "thicket" },
-    "undergrowth-thorns": { material: "plants" },
+    "undergrowth-thorns": { material: "bramble" },
+    snow: { material: "snow" },
+    "snow-deep": { material: "snow" },
+    "sand-shallow": { material: "sand" },
+    "sand-deep": { material: "sand" },
+    lava: { material: "lava", fixed: true },
     hedge: { material: "thicket" },
     "bog-shallow": { material: "mud" },
     rubble: { material: "rubble" },
@@ -39,6 +59,23 @@ const ENVIRONMENT_FEATURES = {
     "current-water": { material: "water", fixed: true }
 };
 export const environmentMaterial = (key) => ENVIRONMENT_FEATURES[key] ?? null;
+
+// The squares within a burst of so many feet of these ones, by distance on the grid.
+export function burstSquares(centres, feet) {
+    const reach = Math.max(0, Math.floor(feet / 5));
+    const keys = new Set();
+    for (const key of centres) {
+        const [column, row] = squareOf(key);
+        for (let dx = -reach; dx <= reach; dx++) for (let dy = -reach; dy <= reach; dy++) if (Math.hypot(dx, dy) <= reach + 0.5) keys.add(squareKey(column + dx, row + dy));
+    }
+    return [...keys];
+}
+
+// These squares moved along the grid.
+export const movedSquares = (keys, dx, dy) => keys.map((key) => {
+    const [column, row] = squareOf(key);
+    return squareKey(column + dx, row + dy);
+});
 
 export const squareKey = (column, row) => `${column},${row}`;
 export const squareOf = (key) => key.split(",").map(Number);

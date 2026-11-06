@@ -8,3 +8,9 @@
 .pf2e-elements-paint button { display: flex; align-items: center; gap: 0.5rem; justify-content: flex-start; }
 .pf2e-elements-paint button.active { outline: 2px solid var(--color-warm-2, #ff6400); }
 .pf2e-elements-swatch { width: 1rem; height: 1rem; border-radius: 3px; border: 1px solid rgba(0, 0, 0, 0.4); }
+.pf2e-elements-paint section { display: flex; flex-direction: column; gap: 0.35rem; }
+.pf2e-elements-paint section[hidden] { display: none; }
+.pf2e-elements-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem; max-height: 22rem; overflow-y: auto; }
+.pf2e-elements-tabs { display: flex; gap: 0.25rem; margin-bottom: 0.5rem; }
+.pf2e-elements-tabs button.active { outline: 2px solid var(--color-warm-2, #ff6400); }
+.pf2e-elements-leave { width: 100%; margin-top: 0.25rem; }

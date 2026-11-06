@@ -1,9 +1,9 @@
 // What a round does to the ground: squares age; fire burns out, puddles dry and steam fades when their time is up; fire catches on fuel next
 // to it. All homebrew, and all the numbers are the world's settings. Pure: the d20 comes from the caller.
 
-import { SURFACES, squareKey, squareOf } from "./surfaces.js";
+import { SURFACES, movedSquares, squareKey, squareOf } from "./surfaces.js";
 
-export const DEFAULT_LIVES = { water: 10, steam: 2, burning: 3 };
+export const DEFAULT_LIVES = { water: 10, steam: 2, burning: 3, embers: 3, toxic: 3, miasma: 3, frostfog: 3, dust: 3, gale: 3 };
 export const SPREAD_DC = 11;
 
 const AROUND = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
@@ -17,16 +17,27 @@ const ENDINGS = { water: "Water dries up", steam: "Steam fades", burning: "Fire 
 // surfaces: [{ material, squares, ages: { key: rounds }, lasting: [keys] }]. A life of 0 never runs out, and neither does a lasting square.
 // → { ages: { material: { key: rounds } }, changes: [{ material, to, keys, words }] }
 // rain: wet precipitation douses flames (GM Core), true or the set of squares it falls on: those that can go out do, and none spread there.
-export function tickSurfaces(surfaces, { lives = DEFAULT_LIVES, spreadDC = SPREAD_DC, d20 = () => 10, rain = false } = {}) {
+// wind: { dx, dy }, clouds drift a square that way. freezing: a set of squares where standing water freezes. fireLasts: fires don't burn out.
+export function tickSurfaces(surfaces, { lives = DEFAULT_LIVES, spreadDC = SPREAD_DC, d20 = () => 10, rain = false, wind = null, freezing = null, fireLasts = false } = {}) {
     const ages = {};
     const changes = [];
     for (const { material, squares, ages: before = {}, lasting = [] } of surfaces) {
-        const life = lives[material] ?? 0;
+        const life = fireLasts && material === "burning" ? 0 : lives[material] ?? 0;
         const stays = new Set(lasting);
         const grown = Object.fromEntries(squares.map((key) => [key, (before[key] ?? 0) + 1]));
         ages[material] = grown;
         const ended = life > 0 ? squares.filter((key) => !stays.has(key) && grown[key] >= life) : [];
         if (ended.length) changes.push({ material, to: null, keys: ended, words: `${ENDINGS[material] ?? `${SURFACES[material]?.label ?? material} fades`} (${countOf(ended)}).` });
+    }
+    if (freezing) {
+        const keys = surfaces.filter((surface) => surface.material === "water" && !surface.fixed).flatMap((surface) => surface.squares.filter((key) => freezing.has(key)));
+        if (keys.length) changes.push({ material: "water", to: "ice", keys, words: `The cold freezes the water (${countOf(keys)}).` });
+    }
+    if (wind) {
+        for (const { material, squares, lasting = [] } of surfaces.filter((surface) => SURFACES[surface.material]?.drifts)) {
+            const moving = squares.filter((key) => !lasting.includes(key));
+            if (moving.length) changes.push({ material, to: null, keys: moving, words: `The wind carries the ${SURFACES[material].label.toLowerCase()}.` }, { material, to: material, keys: movedSquares(moving, wind.dx, wind.dy), words: "" });
+        }
     }
     const wet = rain === true ? () => true : rain ? (key) => rain.has(key) : () => false;
     const out = surfaces.filter((surface) => surface.material === "burning").flatMap((surface) => surface.squares.filter((key) => wet(key) && !(surface.lasting ?? []).includes(key)));
@@ -62,4 +73,4 @@ export function rainPuddles(bare, count, pick = () => 0) {
 const countOf = (keys) => `${keys.length} ${keys.length === 1 ? "square" : "squares"}`;
 
 // The card for a round's changes (none: no card).
-export const roundPlan = (changes, round) => (changes.length ? { key: "round", title: `End of round ${round}: the ground changes`, targets: [], damage: [], changes, notes: changes.map((change) => change.words) } : null);
+export const roundPlan = (changes, round) => (changes.length ? { key: "round", title: `End of round ${round}: the ground changes`, targets: [], damage: [], changes, notes: changes.map((change) => change.words).filter(Boolean) } : null);

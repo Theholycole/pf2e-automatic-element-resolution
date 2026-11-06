@@ -2,7 +2,10 @@
 // owner or the GM; the result comes back through PF2e's roll message, matched by its identifier), and the GM's Apply does the rest.
 // State in the message's flags.
 
-import { MODULE_ID, STATE_EFFECTS, escapeHTML, isActiveGM, paintSquares, surfacesOf } from "./foundry.js";
+import { MODULE_ID, STATE_EFFECTS, coreForcedMove, escapeHTML, isActiveGM, paintSquares, surfacesOf } from "./foundry.js";
+import { onOilPainted } from "./terrain.js";
+import { finishBurst } from "./objects.js";
+import { noteSlide } from "./carry.js";
 import { BASIC_SAVE } from "../src/reactions.js";
 import { SURFACES } from "../src/surfaces.js";
 
@@ -10,7 +13,7 @@ const CARD = "card";
 export const CONDUCTED = "elements:conducted";
 const DEGREES = { criticalSuccess: "Critical success", success: "Success", failure: "Failure", criticalFailure: "Critical failure", automatic: "Also" };
 const STATISTICS = { reflex: "Reflex", acrobatics: "Acrobatics" };
-const CONDITION_WORDS = { immobilized: "immobilized", chilled: "−10 feet of Speed for a round", prone: "prone" };
+const CONDITION_WORDS = { immobilized: "immobilized", prone: "prone", shocked: "shocked" };
 
 export const cardOf = (message) => message?.flags?.[MODULE_ID]?.[CARD] ?? null;
 const identifierOf = (messageId, targetId) => `${MODULE_ID}:${messageId}:${targetId}`;
@@ -23,18 +26,18 @@ export async function postPlan(plan, scene, { from = null, once = null, fromMove
         else damage.push({ type: part.type, amount: part.amount });
     }
     const targets = (plan.targets ?? []).map((id) => scene.tokens.get(id)).filter((token) => token?.actor).map((token) => ({ id: token.id, tokenUuid: token.uuid, actorUuid: token.actor.uuid, name: token.name, degree: null, total: null, applied: false }));
-    const state = { key: plan.key, title: plan.title, sceneId: scene.id, from, once, fromMove, element: plan.element, damage, check: plan.check, penalties: plan.penalties ?? {}, degrees: plan.degrees ?? {}, conducted: Boolean(plan.conducted), targets, squares: plan.squares ?? [], material: plan.material ?? null, to: plan.to, add: plan.add ?? [], remove: plan.remove ?? [], notes: plan.notes ?? [], changes: plan.changes ?? [], leave: plan.leave ?? [], done: false };
+    const state = { key: plan.key, title: plan.title, sceneId: scene.id, from, once, fromMove, element: plan.element, damage, check: plan.check, penalties: plan.penalties ?? {}, degrees: plan.degrees ?? {}, conducted: Boolean(plan.conducted), targets, squares: plan.squares ?? [], material: plan.material ?? null, to: plan.to, add: plan.add ?? [], remove: plan.remove ?? [], notes: plan.notes ?? [], changes: plan.changes ?? [], leave: plan.leave ?? [], leaveMaterial: plan.leaveMaterial ?? "water", doubled: plan.doubled ?? [], burst: plan.burst ?? null, push: plan.push ?? null, done: false };
     return ChatMessage.create({ content: cardHTML(state), speaker: { alias: "Elements" }, flags: { [MODULE_ID]: { [CARD]: state } } });
 }
 
 const groundLine = (state) => {
     if (state.to === undefined || !state.squares?.length) return "";
-    const from = SURFACES[state.material]?.label ?? state.material;
+    const from = SURFACES[state.material]?.label ?? "The ground";
     return `<p class="pf2e-elements-ground">${from} (${state.squares.length} ${state.squares.length === 1 ? "square" : "squares"}) becomes ${state.to ? SURFACES[state.to]?.label.toLowerCase() : "bare ground"}.</p>`;
 };
 
 const degreeWords = (state) => Object.entries(state.degrees ?? {}).flatMap(([degree, row]) => {
-    const words = [row.condition && (CONDITION_WORDS[row.condition] ?? row.condition), row.persistent && `${row.persistent} persistent ${state.element}`].filter(Boolean).join(", ");
+    const words = [row.condition && (CONDITION_WORDS[row.condition] ?? row.condition), row.persistent && `${row.persistent} persistent ${state.element}`, row.stack && `${row.stack.key} ${row.stack.by}`, row.returnTo && "back where it started"].filter(Boolean).join(", ");
     return words ? [`${DEGREES[degree]}: ${words}.`] : [];
 });
 
@@ -46,9 +49,9 @@ export function cardHTML(state) {
         return `<tr class="${target.applied ? "applied" : ""}"><td>${escapeHTML(target.name)}</td><td>${degree}</td><td>${target.applied ? '<i class="fa-solid fa-check"></i>' : ""}</td></tr>`;
     }).join("");
     const notes = [...degreeWords(state), ...(state.notes ?? [])].map((note) => `<p class="pf2e-elements-note">${escapeHTML(note)}</p>`).join("");
-    const hasWork = state.targets.length || state.squares?.length || state.changes?.length || state.add?.length || state.remove?.length;
+    const hasWork = state.targets.length || state.squares?.length || state.changes?.length || state.add?.length || state.remove?.length || state.burst || state.push;
     const apply = state.done || !hasWork ? "" : '<button type="button" data-elements-action="apply" class="pf2e-elements-apply"><i class="fa-solid fa-check-double"></i> Apply (GM)</button>';
-    const leave = state.leave?.length ? '<button type="button" data-elements-action="leave" class="pf2e-elements-leave"><i class="fa-solid fa-droplet"></i> Leave a puddle (GM)</button>' : "";
+    const leave = state.leave?.length ? '<button type="button" data-elements-action="leave" class="pf2e-elements-leave"><i class="fa-solid fa-droplet"></i> ' + (state.leaveMaterial === "plants" ? "Sow" : state.leaveMaterial === "water" ? "Leave a puddle" : `Leave ${(SURFACES[state.leaveMaterial]?.label ?? state.leaveMaterial).toLowerCase()}`) + ' (GM)</button>' : "";
     return `<div class="pf2e-elements-card">
         <header><strong>${escapeHTML(state.title)}</strong></header>
         ${check}${damage}${groundLine(state)}
@@ -73,7 +76,7 @@ export function bindCard(message, html) {
         button.disabled = true;
         try {
             if (button.dataset.elementsAction === "roll") await rollTarget(message, button.dataset.target);
-            else if (button.dataset.elementsAction === "leave") await leavePuddle(message);
+            else if (button.dataset.elementsAction === "leave") await leaveSurface(message);
             else await applyCard(message);
         } catch (error) {
             ui.notifications.error(error.message);
@@ -120,6 +123,17 @@ export async function dropTarget(message, tokenId) {
 
 const damageRollClass = () => (CONFIG.Dice?.rolls ?? []).find((roll) => roll?.name === "DamageRoll");
 
+// Add to a state with a value: oil's stacks, frozen's value.
+export async function stackState(actor, key, by = 1) {
+    const slug = STATE_EFFECTS[key].system.slug;
+    const held = actor.itemTypes?.effect?.find((item) => item.slug === slug);
+    const max = STATE_EFFECTS[key].system.badge?.max ?? 20;
+    if (held) return held.update({ "system.badge.value": Math.min(max, (held.system.badge?.value ?? 1) + by) });
+    const data = foundry.utils.deepClone(STATE_EFFECTS[key]);
+    data.system.badge.value = Math.min(max, by);
+    return actor.createEmbeddedDocuments("Item", [data]);
+}
+
 async function setState(actor, key, on) {
     const held = actor.itemTypes?.effect?.filter((item) => item.flags?.[MODULE_ID]?.state === STATE_EFFECTS[key].system.slug) ?? [];
     if (on && !held.length) await actor.createEmbeddedDocuments("Item", [foundry.utils.deepClone(STATE_EFFECTS[key])]);
@@ -131,16 +145,27 @@ async function addCondition(actor, condition) {
     else await actor.increaseCondition(condition);
 }
 
-// The GM's Leave a puddle: water on those squares that are still bare.
-export async function leavePuddle(message) {
-    if (!game.user.isGM) throw new Error("Only the GM leaves a puddle.");
+// The GM's Leave a surface: its element's surface on those squares that are still bare.
+export async function leaveSurface(message) {
+    if (!game.user.isGM) throw new Error("Only the GM leaves a surface.");
     const state = cardOf(message);
     const scene = game.scenes.get(state.sceneId);
     if (!scene) return;
     const taken = new Set(surfacesOf(scene).flatMap((surface) => surface.squares));
     const bare = state.leave.filter((key) => !taken.has(key));
-    if (bare.length) await paintSquares(scene, bare, "water");
+    if (bare.length) {
+        await paintSquares(scene, bare, state.leaveMaterial);
+        if (state.leaveMaterial === "oil") await onOilPainted(scene, bare);
+    }
     await writeState(message, { ...state, leave: [] });
+}
+
+// Ice: the rest of a forced move, away from where it began.
+async function slide(token, push) {
+    const forcedMove = coreForcedMove();
+    if (!forcedMove) return;
+    noteSlide(token);
+    await forcedMove(token, { point: push.from, direction: "away", feet: push.feet, reason: "Ice" });
 }
 
 // The GM's Apply: damage by each degree, conditions, states, then the ground. Creatures yet to roll stay for another press.
@@ -157,22 +182,25 @@ export async function applyCard(message) {
         const token = await fromUuid(target.tokenUuid).catch(() => null);
         const actor = token?.actor;
         if (actor) {
-            const share = !state.check ? 1 : state.check.basic ? BASIC_SAVE[target.degree] ?? 1 : 1;
+            const share = (!state.check ? 1 : state.check.basic ? BASIC_SAVE[target.degree] ?? 1 : 1) * (state.doubled?.includes(target.id) ? 2 : 1);
             const formulas = (state.damage ?? []).map((part) => [Math.floor(part.amount * share), part.type]).filter(([amount]) => amount > 0).map(([amount, type]) => `${amount}[${type}]`);
             // (The conducted mark: this damage can't set off another conduction.)
             if (formulas.length && DamageRoll) await actor.applyDamage({ damage: await new DamageRoll(formulas.length === 1 ? formulas[0] : `{${formulas.join(",")}}`).evaluate(), token, rollOptions: new Set([CONDUCTED]) });
             const row = state.degrees?.[target.degree ?? "automatic"] ?? {};
             if (row.persistent && DamageRoll) await actor.applyDamage({ damage: await new DamageRoll(`(${row.persistent})[persistent,${state.element}]`).evaluate(), token, rollOptions: new Set([CONDUCTED]) });
             if (row.condition) await addCondition(actor, row.condition);
+            if (row.stack) await stackState(actor, row.stack.key, row.stack.by);
             // (Back where the move began: its stored place, and no second card for moving.)
             if (row.returnTo) await token.update(row.returnTo, { teleport: true, animate: false, [MODULE_ID]: { forced: true } });
             for (const key of state.add ?? []) await setState(actor, key, true);
             for (const key of state.remove ?? []) await setState(actor, key, false);
+            if (state.push) await slide(token, state.push);
         }
         targets.push({ ...target, applied: true });
     }
     const scene = game.scenes.get(state.sceneId);
     if (scene && state.to !== undefined && !state.done && state.squares?.length) await paintSquares(scene, state.squares, state.to);
     if (scene && !state.done) for (const change of state.changes ?? []) await paintSquares(scene, change.keys, change.to);
+    if (scene && state.burst && !state.done) await finishBurst(scene, state);
     await writeState(message, { ...state, targets, done: targets.every((target) => target.applied) });
 }

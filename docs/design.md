@@ -17,13 +17,15 @@ Cole's decisions (2026-11-05):
   - `ticks.js`: what a round does to the ground.
   - `matchups.js`: the element chart, for pairs with no reaction of their own.
   - `carry.js`: the elements a creature carries, and the squares a move touches.
+  - `objects.js`, `storms.js`, `fields.js`: objects, elemental weather, and fields.
 - `scripts/`: Foundry.
   - `foundry.js`: surfaces as regions, creatures as the rules see them, DCs, the Wet and Chilled effects.
   - `triggers.js`: where an element arrives from.
   - `cards.js`: the cards and Apply.
   - `paint.js`: the GM's paint tool.
   - `carry.js`: creatures changing the ground they stand on and move through.
-  - `environment.js`: the environment module's terrain as surfaces, and its rain.
+  - `environment.js`: the environment module's terrain as surfaces, and its weather.
+  - `objects.js`, `storms.js`, `fields.js`, `items.js`: objects as hazard actors, warning regions, field regions and Effects, world items.
   - `terrain.js`: a surface's region behaviors, its Effect and its events.
 
 ## How an element is found (checked on Foundry 14.367, PF2e 8.6.1, 2026-11-05)
@@ -35,8 +37,8 @@ Cole's decisions (2026-11-05):
 
 ## The loop guard
 
-A card's damage is applied with the roll option `elements:conducted`, and the listener ignores anything carrying it.
+A card's damage is applied with the roll option `elements:conducted`, and the listener lets it react only with the creature it hit (so burning ground can light the oil on someone) and never with the ground.
 
 ## Not built yet
 
-Time passing outside combat, and surfaces the element chart names but no rules cover (the book's seven other elements).
+Time passing outside combat, weakness and resistance removal in fields (PF2e has no simple rule for it), and the book's other elements that have no surfaces (body, music, space, spirit, time).

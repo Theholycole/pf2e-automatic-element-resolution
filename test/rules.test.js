@@ -2,7 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { bodyFrom, openSquares, squareKey, touches } from "../src/surfaces.js";
-import { creaturePlans, elementsFrom, levelDC, puddlePlan, shareOf, surfacePlans } from "../src/reactions.js";
+import { OBJECTS, burstPlan, objectsOf, setOff } from "../src/objects.js";
+import { STORMS, pickWarnings, strikePlan } from "../src/storms.js";
+import { fieldEffect, nextField } from "../src/fields.js";
+import { creaturePlans, elementsFrom, leavePlan, levelDC, shareOf, surfacePlans } from "../src/reactions.js";
 import { carriedElements, needsCard, pathSquares, trailPlans, weaknessPlan } from "../src/carry.js";
 import { environmentMaterial } from "../src/surfaces.js";
 import { rainPuddles, roundPlan, tickSurfaces } from "../src/ticks.js";
@@ -93,7 +96,7 @@ test("a creature: water soaks it, fire dries it, cold bites if it's wet", () => 
     assert.deepEqual(creaturePlans({ elements: [{ element: "water" }], creature: creature(true) }), []);
     assert.deepEqual(creaturePlans({ elements: [{ element: "fire" }], creature: creature(true) })[0].remove, ["wet"]);
     assert.deepEqual(creaturePlans({ elements: [{ element: "fire" }], creature: creature(false) }), []);
-    assert.equal(creaturePlans({ elements: [{ element: "cold" }], creature: creature(true), dc: 20 })[0].degrees.criticalFailure.condition, "immobilized");
+    assert.deepEqual(creaturePlans({ elements: [{ element: "cold" }], creature: creature(true), dc: 20 })[0].degrees.criticalFailure.stack, { key: "frozen", by: 4 });
     assert.deepEqual(creaturePlans({ elements: [{ element: "cold" }], creature: creature(false) }), []);
 });
 
@@ -191,8 +194,8 @@ test("Leave a puddle: on a soaked creature's squares unless it's aloft; on an ar
     const soak = (elevation) => creaturePlans({ elements: [{ element: "water" }], creature: { id: "c", name: "Goblin", wet: false, squares: ["3,3"], elevation } })[0];
     assert.deepEqual(soak(0).leave, ["3,3"]);
     assert.deepEqual(soak(10).leave, []);
-    assert.deepEqual(puddlePlan("Spell", ["0,0", "1,0"], [{ squares: ["1,0"] }]).leave, ["0,0"]);
-    assert.equal(puddlePlan("Spell", ["1,0"], [{ squares: ["1,0"] }]), null, "nothing bare");
+    assert.deepEqual(leavePlan("Spell", "water", ["0,0", "1,0"], [{ squares: ["1,0"] }]).leave, ["0,0"]);
+    assert.equal(leavePlan("Spell", "water", ["1,0"], [{ squares: ["1,0"] }]), null, "nothing bare");
 });
 
 test("a creature carries its traits and its persistent damage's types, and only elements", () => {
@@ -279,7 +282,7 @@ test("new surfaces' rules", () => {
     assert.equal(death.title, "Goblin withers on the deathly ground");
     assert.deepEqual(death.damage, [{ formula: "2d6", type: "void" }]);
     assert.deepEqual(death.degrees, {});
-    assert.equal(terrainRules("light").effect, null);
+    assert.equal(terrainRules("light").effect.rules[0].key, "Note");
 });
 
 test("weakness to the ground: a puddle hurts what's weak to water, the highest once, and only where it touched", () => {
@@ -328,6 +331,98 @@ test("Grease on those standing there: the better save, or prone", () => {
     assert.equal(plan.degrees.failure.condition, "prone");
     assert.equal(plan.degrees.criticalFailure.condition, "prone");
     assert.deepEqual(plan.targets, ["t"]);
+});
+
+test("oil: fire turns every stack into persistent fire; water washes it off", () => {
+    const creature = { id: "c", name: "Goblin", oil: 3 };
+    const [ignite] = creaturePlans({ elements: [{ element: "fire" }], creature });
+    assert.equal(ignite.key, "ignite");
+    assert.equal(ignite.degrees.automatic.persistent, "3d6");
+    assert.deepEqual(ignite.remove, ["oil"]);
+    assert.deepEqual(creaturePlans({ elements: [{ element: "water" }], creature }).find((plan) => plan.key === "wash").remove, ["oil"]);
+    assert.deepEqual(creaturePlans({ elements: [{ element: "fire" }], creature: { id: "c", name: "Goblin" } }), []);
+});
+
+test("stronger combos: lightning doubles on the wet and shocks those who fail; fire thaws; light limns", () => {
+    const wet = { id: "w", squares: ["1,0"], elevation: 0, wet: true };
+    const dry = { id: "d", squares: ["2,0"], elevation: 0 };
+    const [plan] = surfacePlans({ elements: [{ element: "electricity", amount: 10 }], contact: ["0,0"], surfaces: [{ material: "water", squares: ["0,0", "1,0", "2,0"] }], creatures: [wet, dry], dc: 20 });
+    assert.deepEqual(plan.doubled, ["w"]);
+    assert.equal(plan.degrees.failure.condition, "shocked");
+    assert.deepEqual(creaturePlans({ elements: [{ element: "fire" }], creature: { id: "c", name: "G", frozen: 3 } })[0].remove, ["frozen"]);
+    assert.deepEqual(creaturePlans({ elements: [{ element: "light" }], creature: { id: "c", name: "G" } })[0].add, ["limned"]);
+    assert.deepEqual(creaturePlans({ elements: [{ element: "electricity" }], creature: { id: "c", name: "G", wet: true } })[0].add, ["shocked"]);
+});
+
+test("new ground and clouds react as written", () => {
+    const on = (element, material) => surfacePlans({ elements: [{ element, amount: 0 }], contact: ["0,0"], surfaces: [{ material, squares: ["0,0"] }], creatures: [], dc: 18 })[0]?.to;
+    const table = [["electricity", "sand", "glass"], ["fire", "sand", "glass"], ["fire", "snow", "water"], ["water", "lava", "rubble"], ["water", "acid", "water"], ["vitality", "plants", "flowers"], ["fire", "grass", "burning"], ["fire", "bramble", "burning"], ["fire", "gale", "embers"], ["water", "embers", "steam"], ["vitality", "miasma", null], ["light", "miasma", null], ["fire", "toxic", "embers"], ["cold", "gale", "frostfog"], ["air", "sand", "dust"]];
+    for (const [element, material, to] of table) assert.equal(on(element, material), to, `${element} on ${material}`);
+});
+
+test("a cloud: air moves it away from the source; with no source it scatters", () => {
+    const cloud = { material: "embers", squares: ["5,0", "6,0"] };
+    const [moved] = surfacePlans({ elements: [{ element: "air", amount: 0 }], contact: ["5,0"], surfaces: [cloud], creatures: [], source: { x: 0, y: 0 } });
+    assert.deepEqual(moved.changes[0], { material: "embers", to: null, keys: ["5,0", "6,0"], words: "" });
+    assert.deepEqual(moved.changes[1].keys, ["7,0", "8,0"]);
+    assert.equal(surfacePlans({ elements: [{ element: "air", amount: 0 }], contact: ["5,0"], surfaces: [cloud], creatures: [] })[0].to, null);
+});
+
+test("wind drifts clouds, cold freezes water under the sky, a firestorm's fires last", () => {
+    const { changes } = tickSurfaces([{ material: "toxic", squares: ["1,1"], ages: {} }, { material: "water", squares: ["2,2", "3,3"], ages: {} }], { lives: {}, wind: { dx: 1, dy: 0 }, freezing: new Set(["2,2"]) });
+    assert.deepEqual(changes.find((change) => change.to === "toxic").keys, ["2,1"]);
+    assert.deepEqual(changes.find((change) => change.to === "ice").keys, ["2,2"]);
+    assert.deepEqual(tickSurfaces([{ material: "burning", squares: ["0,0"], ages: { "0,0": 9 } }], { lives: { burning: 3 }, fireLasts: true }).changes, []);
+});
+
+test("harvest: wood on plants bursts only what it touched, and a creature walking by doesn't", () => {
+    const plants = { material: "plants", squares: ["0,0", "1,0"] };
+    const other = { id: "o", squares: ["0,0"], elevation: 0 };
+    const [plan] = surfacePlans({ elements: [{ element: "wood", amount: 0 }], contact: ["0,0"], surfaces: [plants], creatures: [other], dc: 20, hazardFormula: "2d6" });
+    assert.equal(plan.key, "harvest");
+    assert.deepEqual(plan.squares, ["0,0"]);
+    assert.deepEqual(plan.damage, [{ formula: "2d6", type: "piercing" }]);
+    assert.deepEqual(plan.targets, ["o"]);
+    assert.deepEqual(trailPlans({ creature: { id: "t", squares: ["0,0"] }, elements: [{ element: "wood", amount: 0 }], contact: ["0,0"], surfaces: [plants], creatures: [] }), []);
+});
+
+test("leaving a surface: every element's own, Sow for wood", () => {
+    assert.equal(leavePlan("Spell", "wood", ["0,0"], []).title, "Spell: Sow");
+    assert.equal(leavePlan("Spell", "wood", ["0,0"], []).leaveMaterial, "plants");
+    assert.equal(leavePlan("Spell", "void", ["0,0"], []).leaveMaterial, "miasma");
+    assert.equal(leavePlan("Spell", "electricity", ["0,0"], []), null);
+});
+
+test("objects: a barrel and a natural one for each element, set off by what they should be", () => {
+    const elements = new Set(Object.values(OBJECTS).map((object) => object.element));
+    assert.equal(elements.size, 15);
+    assert.equal(objectsOf(true).length, 15);
+    assert.equal(objectsOf(false).length, 15);
+    const barrel = OBJECTS["fire-barrel"];
+    assert.equal(setOff(barrel, [{ element: "fire" }]), true);
+    assert.equal(setOff(barrel, [{ element: "water" }]), false);
+    const plan = burstPlan(barrel, "b", ["5,5"], [{ id: "near", squares: ["6,5"], elevation: 0 }, { id: "far", squares: ["20,5"], elevation: 0 }, { id: "b", squares: ["5,5"], elevation: 0 }], { dc: 20, formula: "2d6" });
+    assert.deepEqual(plan.targets, ["near"]);
+    assert.equal(plan.to, "burning");
+    assert.equal(plan.burst.tokenId, "b");
+});
+
+test("storms: warnings come from the sky's squares, and a strike hits around its mark", () => {
+    assert.deepEqual(pickWarnings(["a", "b", "c"], 2), ["a", "b"]);
+    const plan = strikePlan(STORMS.meteors, "5,5", [{ id: "in", squares: ["6,5"], elevation: 0 }, { id: "out", squares: ["9,5"], elevation: 0 }], { dc: 20, amount: 9 });
+    assert.deepEqual(plan.targets, ["in"]);
+    assert.deepEqual(plan.damage, [{ amount: 9, type: "fire" }]);
+    assert.equal(plan.to, "burning");
+    assert.equal(strikePlan(STORMS.lightning, "5,5", [], { dc: 20, amount: 9 }).to, undefined);
+});
+
+test("fields: a boost and resistance by level, and a cycle", () => {
+    const fire = fieldEffect("fire");
+    assert.deepEqual(fire.rules[0].predicate, ["item:trait:fire"]);
+    assert.equal(fire.rules[1].key, "Resistance");
+    assert.equal(fieldEffect("water").rules.length, 1, "water isn't a damage type");
+    assert.equal(nextField(["fire", "cold"], "fire"), "cold");
+    assert.equal(nextField(["fire", "cold"], "cold"), "fire");
 });
 
 test("every script loads", async () => {

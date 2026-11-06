@@ -6,9 +6,16 @@
 // A card comes once for each roll and reaction. Damage marked as conducted sets off nothing.
 
 import { CONDUCTED, cardOf, dropTarget, postPlan } from "./cards.js";
-import { MODULE_ID, creatureOf, creaturesOf, damageOf, dcFrom, hazardFormula, isActiveGM, ruleSettings, squareAt, surfacesOf, tickSettings, writeAges } from "./foundry.js";
-import { isRaining, isSoakingRain, skySquares, syncRain } from "./environment.js";
-import { creaturePlans, elementsFrom, puddlePlan, surfacePlans } from "../src/reactions.js";
+import { MODULE_ID, creatureOf, creaturesOf, damageOf, dcFrom, hazardFormula, isActiveGM, ruleSettings, sceneDC, squareAt, surfacesOf, tickSettings, writeAges } from "./foundry.js";
+import { groundWeather, isSoakingRain, skySquares, syncRain } from "./environment.js";
+import { burstObject, objectOfActor, objectsIn } from "./objects.js";
+import { advanceFields } from "./fields.js";
+import { stormRound, stormFireLasts } from "./storms.js";
+import { onOilPainted } from "./terrain.js";
+import { paintSquares } from "./foundry.js";
+import { burstSquares } from "../src/surfaces.js";
+import { setOff } from "../src/objects.js";
+import { creaturePlans, elementsFrom, leavePlan, surfacePlans } from "../src/reactions.js";
 import { rainPuddles, roundPlan, tickSurfaces } from "../src/ticks.js";
 
 const recentCards = () => game.messages.contents.slice(-30).filter((message) => cardOf(message));
@@ -29,12 +36,21 @@ async function postOnce(plans, scene, key) {
     }
 }
 
+// Where an element's source stands, on the grid, for what it pushes away.
+const sourceOf = (actor) => {
+    const token = actor?.getActiveTokens?.(false, true)?.[0];
+    if (!token) return null;
+    const size = token.parent.grid.size;
+    const stored = token._source ?? token;
+    return { x: Math.floor(stored.x / size), y: Math.floor(stored.y / size) };
+};
+
 // A creature hit: what it touches reacts, and so does the creature.
-async function react({ scene, token, elements, actor, item, key }) {
+async function react({ scene, token, elements, actor, item, key, creatureOnly = false }) {
     const direct = directOf(key, token.id);
     const creature = creatureOf(token);
-    const dc = dcFrom(actor, item);
-    await postOnce(surfacePlans({ elements, contact: (creature.elevation ?? 0) > 0 ? [] : creature.squares, surfaces: surfacesOf(scene), creatures: creaturesOf(scene), direct, dc, hazardFormula: hazardFormula(), settings: ruleSettings() }), scene, key);
+    const dc = dcFrom(actor, item) ?? sceneDC(scene);
+    if (!creatureOnly) await postOnce(surfacePlans({ source: sourceOf(actor), elements, contact: (creature.elevation ?? 0) > 0 ? [] : creature.squares, surfaces: surfacesOf(scene), creatures: creaturesOf(scene), direct, dc, hazardFormula: hazardFormula(), settings: ruleSettings() }), scene, key);
     await postOnce(creaturePlans({ elements, creature, dc }), scene, `${key}:${token.id}`);
     // (It may already be on a card from an earlier target of the same roll.)
     for (const message of recentCards()) if (cardOf(message).from === key && cardOf(message).conducted) await dropTarget(message, token.id);
@@ -48,15 +64,19 @@ export async function onDamageMessage(message) {
     const token = await fromUuid(targetUuid).catch(() => null);
     if (!token?.parent) return;
     const elements = elementsFrom({ damage: message.rolls.flatMap(damageOf), traits: message.flags.pf2e.context.traits });
+    // (Oil, thrown: it splashes on the target, lit or not.)
+    if (message.flags?.pf2e?.origin?.slug === "oil-1-pint" || message.item?.slug === "oil-1-pint") {
+        const creature = creatureOf(token);
+        await postOnce([{ key: "oil-splash", title: "The oil splashes", targets: [], damage: [], leave: creature.squares, leaveMaterial: "oil" }], token.parent, message.id);
+    }
     if (elements.length) await react({ scene: token.parent, token, elements, actor: message.actor, item: message.item, key: message.id });
 }
 
-// An effect's area placed: the ground under it changes. Its damage isn't known here, so nothing conducts from this alone.
+// An effect's area placed: the ground under it changes, what's set off goes up, and its card can leave a surface. Its damage isn't known here,
+// so nothing conducts from this alone. Grease is oil, so it pays to light it.
 export async function onRegionCreated(region) {
     if (!game.users.activeGM?.isSelf || !region.flags?.pf2e?.areaShape) return;
     const origin = region.flags.pf2e.origin ?? {};
-    const elements = elementsFrom({ traits: origin.traits ?? [] }).filter(({ element }) => element !== "electricity");
-    if (!elements.length) return;
     const scene = region.parent;
     const size = scene.grid.size;
     const bounds = region.bounds ?? region.object?.bounds;
@@ -68,13 +88,43 @@ export async function onRegionCreated(region) {
             }
         }
     }
-    const item = origin.uuid ? await fromUuid(origin.uuid).catch(() => null) : null;
-    const plans = surfacePlans({ elements, contact, surfaces: surfacesOf(scene), creatures: creaturesOf(scene), dc: dcFrom(item?.actor, item), hazardFormula: hazardFormula(), settings: ruleSettings() });
-    await postOnce(plans, scene, region.id);
-    if (elements.some(({ element }) => element === "water")) {
-        const puddle = puddlePlan(origin.name ?? "The water", contact, surfacesOf(scene));
-        if (puddle) await postOnce([puddle], scene, region.id);
+    if (origin.slug === "grease") {
+        await paintSquares(scene, contact, "oil");
+        await onOilPainted(scene, contact);
     }
+    const all = elementsFrom({ traits: origin.traits ?? [] });
+    const elements = all.filter(({ element }) => element !== "electricity");
+    if (!all.length) return;
+    const item = origin.uuid ? await fromUuid(origin.uuid).catch(() => null) : null;
+    const dc = dcFrom(item?.actor, item) ?? sceneDC(scene);
+    await postOnce(surfacePlans({ source: sourceOf(item?.actor), elements, contact, surfaces: surfacesOf(scene), creatures: creaturesOf(scene), dc, hazardFormula: hazardFormula(), settings: ruleSettings() }), scene, region.id);
+    for (const { token, object } of objectsIn(scene, contact)) if (setOff(object, all)) await burstObject(token, object, { dc });
+    if (game.settings.get(MODULE_ID, "offerSurfaces")) {
+        for (const { element } of all) {
+            const plan = leavePlan(origin.name ?? "The effect", element, contact, surfacesOf(scene));
+            if (plan) await postOnce([plan], scene, region.id);
+        }
+    }
+}
+
+// An item's use: Sow where it stands, or Harvest what's near. Items carry what they do in their flags (scripts/items.js).
+export async function onItemUsed(message) {
+    if (!game.users.activeGM?.isSelf) return;
+    const uuid = message.flags?.pf2e?.origin?.uuid;
+    if (!uuid) return;
+    const item = await fromUuid(uuid).catch(() => null);
+    const use = item?.flags?.[MODULE_ID]?.use;
+    const token = item?.actor?.getActiveTokens?.(false, true)?.[0];
+    if (!use || !token?.parent) return;
+    const scene = token.parent;
+    const creature = creatureOf(token);
+    const contact = burstSquares(creature.squares, use.feet ?? 10);
+    if (use.harvest) {
+        await postOnce(surfacePlans({ elements: [{ element: "wood", amount: 0 }], contact, surfaces: surfacesOf(scene), creatures: creaturesOf(scene), direct: [token.id], dc: dcFrom(item.actor, item) ?? sceneDC(scene), hazardFormula: hazardFormula(), settings: ruleSettings() }).filter((plan) => plan.key === "harvest"), scene, message.id);
+        return;
+    }
+    const plan = leavePlan(item.name, use.element, contact, surfacesOf(scene));
+    if (plan) await postOnce([plan], scene, message.id);
 }
 
 function bareSquares(scene, surfaces) {
@@ -96,12 +146,16 @@ export async function onCombatUpdate(combat, change, options) {
     const scene = combat.scene ?? game.scenes.viewed;
     if (!scene) return;
     await syncRain(scene);
+    await advanceFields(scene, change.round);
+    await stormRound(scene, change.round);
     const surfaces = surfacesOf(scene);
-    const sky = isRaining(scene) ? skySquares(scene) : null;
-    const puddles = isSoakingRain(scene) ? rainPuddles(bareSquares(scene, surfaces).filter((key) => sky.has(key)), game.settings.get(MODULE_ID, "rainPuddles"), (n) => Math.floor(CONFIG.Dice.randomUniform() * n)) : null;
+    const weather = groundWeather(scene);
+    const puddles = isSoakingRain(scene) ? rainPuddles(bareSquares(scene, surfaces).filter((key) => skySquares(scene).has(key)), game.settings.get(MODULE_ID, "rainPuddles"), (n) => Math.floor(CONFIG.Dice.randomUniform() * n)) : null;
     if (!surfaces.length && !puddles) return;
     const d20 = () => Math.ceil(CONFIG.Dice.randomUniform() * 20);
-    const { ages, changes } = tickSurfaces(surfaces, { ...tickSettings(), d20, rain: sky ?? false });
+    const settings = tickSettings();
+    if (weather.hot) settings.lives.water = Math.ceil(settings.lives.water / 2);
+    const { ages, changes } = tickSurfaces(surfaces, { ...settings, d20, rain: weather.rain, wind: weather.wind, freezing: weather.freezing, fireLasts: stormFireLasts(scene) });
     await writeAges(scene, ages);
     const stale = recentCards().filter((message) => cardOf(message).key === "round" && cardOf(message).sceneId === scene.id && !cardOf(message).done).map((message) => message.id);
     if (stale.length) await ChatMessage.deleteDocuments(stale);
@@ -117,8 +171,7 @@ export function onApplyDamage(actor, params) {
     const options = params.rollOptions;
     const conducted = options instanceof Set ? options.has(CONDUCTED) : Array.isArray(options) && options.includes(CONDUCTED);
     // (Whoever applied it, the GM or a player on their own creature, posts the card; only the GM can Apply it.)
-    if (conducted) return;
-    const token = params.token?.document ?? params.token ?? actor.getActiveTokens?.(true, true)?.[0];
+    const token = params.token?.document ?? params.token ?? actor.getActiveTokens?.(false, true)?.[0];
     const scene = token?.parent;
     if (!scene) return;
     // (A persistent tick isn't an element arriving: a burning creature doesn't boil the puddle it steps in.)
@@ -127,8 +180,16 @@ export function onApplyDamage(actor, params) {
     const item = params.item ?? null;
     const message = rollMessageOf(item);
     const elements = elementsFrom({ damage: damageOf(message?.rolls?.[0] ?? params.damage), traits: message?.flags?.pf2e?.context?.traits ?? item?.system?.traits?.value ?? [] });
+    // (An object: being destroyed, or the right element, sets it off.)
+    const object = objectOfActor(actor);
+    if (object) {
+        return () => {
+            if (setOff(object, elements) || (actor.hitPoints?.value ?? 1) <= 0) burstObject(token, object, { dc: dcFrom(item?.actor ?? message?.actor, item) }).catch((error) => console.error(`${MODULE_ID} |`, error));
+        };
+    }
     if (!elements.length) return;
     return () => {
-        react({ scene, token, elements, actor: item?.actor ?? message?.actor ?? null, item, key: message?.id ?? `apply:${token.id}:${Date.now()}` }).catch((error) => console.error(`${MODULE_ID} |`, error));
+        // (Damage from a card sets off nothing on the ground, but it can still light the oil on a creature.)
+        react({ scene, token, elements, actor: item?.actor ?? message?.actor ?? null, item, key: message?.id ?? `apply:${token.id}:${Date.now()}`, creatureOnly: conducted }).catch((error) => console.error(`${MODULE_ID} |`, error));
     };
 }

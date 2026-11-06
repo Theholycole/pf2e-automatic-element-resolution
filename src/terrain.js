@@ -16,6 +16,9 @@
 import { featureRules, sureFooted } from "../../pf2e-resolution-core/src/environment/terrain.js";
 import { SURFACES } from "./surfaces.js";
 
+// "2d6" to "4d6".
+const doubled = (formula) => formula.replace(/^(\d+)d/, (_, count) => `${Number(count) * 2}d`);
+
 const CONCEALED = "Compendium.pf2e.conditionitems.Item.DmAIPqOBomZ7H95W";
 
 const BALANCE_NOTE = "Critical success: it moves on normally. Success: it moves on, treating this as difficult terrain. Failure: it stays where it was (the action wasted). Critical failure: it stays where it was and falls prone.";
@@ -45,6 +48,21 @@ export function terrainRules(material, { dc = null, hazardFormula = null } = {})
         case "burning": return { ...bare, hazard: { formula: hazardFormula, type: "fire", persistent: "1d6", words: "burns in the flames" }, summary: ["Fire damage on entering and at the start of each turn in it, and 1d6 persistent fire."] };
         case "death": return { ...bare, hazard: { formula: hazardFormula, type: "void", words: "withers on the deathly ground" }, summary: ["Void damage on entering and at the start of each turn in it."] };
         case "life": return { ...bare, effect: { name: "Surface: Living ground", rules: [{ key: "FastHealing", value: 1 }] }, summary: ["Fast healing 1 inside it."] };
+        case "flowers": return { ...bare, effect: { name: "Surface: Flowers", rules: [{ key: "FastHealing", value: 1 }] }, summary: ["Fast healing 1 inside it."] };
+        case "sand": return fromFeature(material, "sand-shallow", dc);
+        case "snow": return fromFeature(material, "snow", dc);
+        case "bramble": return { ...fromFeature(material, "undergrowth-light", dc), hazard: { formula: hazardFormula, type: "piercing", when: "enter", words: "is cut up by the brambles" }, summary: ["Difficult terrain, and piercing damage for each move into it."] };
+        case "glass": return { ...bare, hazard: { formula: hazardFormula, type: "piercing", when: "enter", words: "is cut by the broken glass" }, summary: ["Piercing damage for each move into it."] };
+        case "grass": return { ...bare, effect: { name: "Surface: Tall grass", rules: [{ key: "GrantItem", uuid: CONCEALED, allowDuplicate: true, onDeleteActions: { granter: "cascade", grantee: "cascade" } }] }, summary: ["Concealed inside it."] };
+        case "lava": return { ...bare, costs: { walk: 2 }, hazard: { formula: hazardFormula && doubled(hazardFormula), type: "fire", persistent: "2d6", words: "burns in the lava" }, summary: ["Difficult terrain, double fire damage on entering and at each turn's start, and 2d6 persistent fire."] };
+        case "acid": return { ...bare, hazard: { formula: hazardFormula, type: "acid", words: "burns in the acid" }, summary: ["Acid damage on entering and at each turn's start."] };
+        case "gale": return { ...bare, costs: { fly: 2 }, effect: { name: "Surface: Gale", rules: [{ key: "FlatModifier", selector: "attack", type: "circumstance", value: -1, label: "Gale", predicate: ["item:ranged"] }] }, summary: ["Difficult terrain for fliers, and \u22121 to ranged attacks from inside it."] };
+        case "embers": return { ...bare, hazard: { formula: hazardFormula, type: "fire", words: "burns in the ember cloud" }, summary: ["Fire damage on entering and at each turn's start."] };
+        case "toxic": return { ...bare, hazard: { formula: hazardFormula, type: "poison", words: "chokes on the poison cloud" }, summary: ["Poison damage on entering and at each turn's start. Fire explodes it."] };
+        case "miasma": return { ...bare, hazard: { formula: hazardFormula, type: "void", words: "withers in the death cloud" }, summary: ["Void damage on entering and at each turn's start. Life and healing clear it."] };
+        case "frostfog": return { ...bare, hazard: { formula: hazardFormula, type: "cold", words: "freezes in the fog" }, effect: { name: "Surface: Frost fog", rules: [{ key: "GrantItem", uuid: CONCEALED, allowDuplicate: true, onDeleteActions: { granter: "cascade", grantee: "cascade" } }] }, summary: ["Concealed inside it, and cold damage on entering and at each turn's start."] };
+        case "dust": return { ...bare, effect: { name: "Surface: Dust cloud", rules: [{ key: "GrantItem", uuid: CONCEALED, allowDuplicate: true, onDeleteActions: { granter: "cascade", grantee: "cascade" } }] }, summary: ["Concealed inside it."] };
+        case "light": return { ...bare, effect: { name: "Surface: Light", rules: [{ key: "Note", selector: "ac", title: "Limned", text: "Limned in light: it can't be concealed here." }] }, summary: ["Limned inside it: it can't be concealed."] };
         default: return bare;
     }
 }

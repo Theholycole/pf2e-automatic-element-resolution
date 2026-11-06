@@ -2,7 +2,8 @@
 // behavior reaches this module through CONFIG, on the active GM's client.
 
 import { MODULE_ID, creatureOf, isActiveGM, ruleSquaresOf, surfaceMaterial, surfaceDC, hazardFormula } from "./foundry.js";
-import { postPlan } from "./cards.js";
+import { postPlan, stackState } from "./cards.js";
+import { fieldEffect } from "../src/fields.js";
 import { balancePlan, effectRulesFor, greasePlan, hazardPlan, steady, terrainRules } from "../src/terrain.js";
 import { SURFACES, touches } from "../src/surfaces.js";
 
@@ -11,7 +12,12 @@ const EVENTS = ["tokenEnter", "tokenExit", "tokenMoveIn", "tokenMoveWithin", "to
 const handledMoves = new Set();
 const adding = new Set();
 
-const rulesOf = (region, actor = null) => terrainRules(surfaceMaterial(region), { dc: surfaceDC(actor), hazardFormula: hazardFormula() });
+const rulesOf = (region, actor = null) => (fieldOf(region) ? fieldRules(fieldOf(region)) : terrainRules(surfaceMaterial(region), { dc: surfaceDC(actor), hazardFormula: hazardFormula() }));
+const fieldOf = (region) => region?.flags?.[MODULE_ID]?.field ?? null;
+const fieldRules = (element) => {
+    const { name, rules, description } = fieldEffect(element);
+    return { material: `field-${element}`, label: name, feature: null, costs: {}, environment: [], effect: { name, rules }, balance: null, hazard: null, summary: [description] };
+};
 const ignoredOf = (actor) => {
     const terrain = actor?.system?.movement?.terrain;
     return { difficult: [...(terrain?.difficult?.ignored ?? [])], greater: [...(terrain?.greater?.ignored ?? [])] };
@@ -21,6 +27,13 @@ const isCreature = (actor) => Boolean(actor?.isOfType?.("creature"));
 // (PF2e's isAffectedBy answers for void and vitality on the undead, and doesn't look at immunities.)
 const immuneTo = (actor, type) => actor?.isAffectedBy?.(type) === false || (actor?.attributes?.immunities ?? []).some((immunity) => immunity.type === type);
 const isCloud = (region) => Boolean(SURFACES[surfaceMaterial(region)]?.cloud);
+export { fieldOf };
+
+// A marked field's script for its events.
+export async function applyFieldRegion(region) {
+    await region.createEmbeddedDocuments("RegionBehavior", [{ type: "executeScript", name: `${region.name}: events`, system: { source: SCRIPT, events: EVENTS }, flags: { [MODULE_ID]: { terrain: true } } }]);
+    await syncInside(region);
+}
 
 // A new surface's behaviors: costs, environment types, and the script for its events.
 export async function applyTerrain(region) {
@@ -66,23 +79,24 @@ export async function syncInside(region) {
     const squares = ruleSquaresOf(region);
     for (const token of region.parent.tokens) {
         if (!isCreature(token.actor)) continue;
-        if (touches(creatureOf(token), squares, { cloud: isCloud(region) })) await addInside(token, region);
+        if (touches(creatureOf(token), squares, { cloud: isCloud(region) || Boolean(fieldOf(region)) })) await addInside(token, region);
         else await removeInside(token.actor, region);
     }
 }
 
 // A surface gone: nobody keeps its Effect.
 export async function onSurfaceDeleted(region) {
-    if (!isActiveGM() || !surfaceMaterial(region)) return;
+    if (!isActiveGM() || !(surfaceMaterial(region) || fieldOf(region))) return;
     for (const token of region.parent.tokens) if (token.actor) await removeInside(token.actor, region);
 }
 
 const bestStatistic = (actor, statistics) => statistics.reduce((best, slug) => ((actor.getStatistic?.(slug)?.mod ?? -Infinity) > (actor.getStatistic?.(best)?.mod ?? -Infinity) ? slug : best), statistics[0]);
 
-// Oil just painted: those standing there save, as Grease.
+// Oil just painted: those standing there pick up a stack and save, as Grease.
 export async function onOilPainted(scene, keys) {
     for (const token of scene.tokens) {
         if (!isCreature(token.actor) || !touches(creatureOf(token), keys)) continue;
+        await stackState(token.actor, "oil", 1);
         const rules = terrainRules("oil", { dc: surfaceDC(token.actor) });
         await postPlan(greasePlan(rules, token, bestStatistic(token.actor, rules.balance.statistics)), scene);
     }
@@ -90,11 +104,11 @@ export async function onOilPainted(scene, keys) {
 
 // A surface's event (its script behavior).
 export async function regionEvent(region, behavior, event) {
-    if (!isActiveGM() || !surfaceMaterial(region)) return;
+    if (!isActiveGM() || !(surfaceMaterial(region) || fieldOf(region))) return;
     const token = event?.data?.token;
     if (!isCreature(token?.actor)) return;
     const rules = rulesOf(region, token.actor);
-    const aloft = !isCloud(region) && ((token._source ?? token).elevation ?? 0) > 0;
+    const aloft = !isCloud(region) && !fieldOf(region) && ((token._source ?? token).elevation ?? 0) > 0;
     switch (event.name) {
         case "tokenEnter":
             if (!aloft) await addInside(token, region);
@@ -118,7 +132,7 @@ export async function regionEvent(region, behavior, event) {
             return;
         }
         case "tokenTurnStart":
-            if (rules.hazard && !aloft && !immuneTo(token.actor, rules.hazard.type)) await postPlan(hazardPlan(rules, token), region.parent);
+            if (rules.hazard && rules.hazard.when !== "enter" && !aloft && !immuneTo(token.actor, rules.hazard.type)) await postPlan(hazardPlan(rules, token), region.parent);
             return;
     }
 }
