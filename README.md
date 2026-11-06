@@ -21,7 +21,7 @@ When an element touches a surface or a creature, a card proposes what happens. E
 | Fire | Ice | It melts to water |
 | Water | Burning ground | The fire goes out and leaves water |
 | Cold | Burning ground | The fire goes out |
-| Cold | Water | It freezes; Reflex or immobilized for those standing in it |
+| Cold | Water | It freezes; Reflex or stuck in the ice for those standing in it: immobilized until they Escape against the same DC, from a button on the chat card, or the ice breaks, melts or is left behind |
 | Air | Steam | It blows away |
 | Water | A creature | Wet: fire resistance 2, −1 to saves against electricity, for 1 minute |
 | Fire | A wet creature | It dries off |

@@ -36,7 +36,7 @@ export const SURFACE_REACTIONS = [
     // (Quench and Sea Surge put out non-magical fires.)
     { key: "douse", element: "water", surfaces: ["burning"], title: "The water puts out the fire", to: "water" },
     { key: "smother", element: "cold", surfaces: ["burning"], title: "The cold puts out the fire", to: null },
-    { key: "freeze", element: "cold", surfaces: ["water"], title: "The water freezes", to: "ice", save: { failure: "immobilized", criticalFailure: "immobilized" } },
+    { key: "freeze", element: "cold", surfaces: ["water"], title: "The water freezes", to: "ice", save: { failure: "icebound", criticalFailure: "icebound" } },
     // (Gust of Wind, as written: disperses fog and mist, puts out small non-magical fires. Air moves a cloud away from its source; with no source, it scatters.)
     { key: "drift", element: "air", surfaces: ["steam", "embers", "toxic", "miasma", "frostfog", "dust"], title: "The wind moves the {surface}", drift: true, to: null },
     { key: "gust", element: "air", surfaces: ["burning"], title: "The wind blows the fire out", to: null },

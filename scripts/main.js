@@ -1,7 +1,7 @@
 // PF2e Automatic Element Resolution: a battlefield that reacts to elements. See docs/design.md.
 
 import { MODULE_ID, isActiveGM, isLimnedItem, limnedOf, paintSquares, registerSettings, surfacesOf } from "./foundry.js";
-import { applyCard, bindCard, bindThaw, onRollMessage, postPlan } from "./cards.js";
+import { applyCard, bindCard, bindEscape, bindThaw, onRollMessage, postPlan, releaseFromIce } from "./cards.js";
 import { onApplyDamage, onCombatUpdate, onDamageMessage, onItemUsed, onRegionCreated } from "./triggers.js";
 import { openPaint } from "./paint.js";
 import { installNeutralFields, syncSceneField } from "./fields.js";
@@ -38,6 +38,9 @@ Hooks.on("deleteRegion", safely(onSurfaceDeleted));
 Hooks.on("updateCombat", safely(onCombatUpdate));
 Hooks.on("updateCombat", safely(onTurnChange));
 Hooks.on("moveToken", safely(onTokenMoved));
+Hooks.on("moveToken", safely((token) => releaseFromIce(token.parent)));
+Hooks.on("updateRegion", safely((region) => releaseFromIce(region.parent)));
+Hooks.on("deleteRegion", safely((region) => releaseFromIce(region.parent)));
 Hooks.on("updateScene", safely(async (scene, change) => {
     if (isActiveGM() && foundry.utils.hasProperty(change, `flags.${ENVIRONMENT_ID}`)) await syncRain(scene);
 }));
@@ -50,6 +53,7 @@ Hooks.on("createToken", safely(async (token) => {
 Hooks.on("renderChatMessageHTML", (message, html) => {
     bindCard(message, html);
     bindThaw(message, html);
+    bindEscape(message, html);
     bindAim(message, html);
 });
 // Limned means it can't be concealed: the condition goes as it arrives, or as Limned does.

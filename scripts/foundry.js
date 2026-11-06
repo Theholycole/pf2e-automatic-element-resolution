@@ -14,6 +14,7 @@ export const OIL_SLUG = "elements-oil";
 export const FROZEN_SLUG = "elements-frozen";
 export const SHOCKED_SLUG = "elements-shocked";
 export const LIMNED_SLUG = "elements-limned";
+export const ICEBOUND_SLUG = "elements-icebound";
 
 export const escapeHTML = (text) => String(text ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 export const isActiveGM = () => game.users.activeGM?.isSelf ?? game.user.isGM;
@@ -177,6 +178,9 @@ export const STATE_EFFECTS = {
     frozen: effect("Frozen", FROZEN_SLUG, "icons/magic/water/snowflake-ice-blue.webp", UNLIMITED, [
         { key: "FlatModifier", selector: "all-speeds", type: "status", value: "-5*@item.badge.value", label: "Frozen" }
     ], "Slowly freezing over: &minus;5-foot status penalty to Speeds for each point. It or an adjacent ally can spend an Interact action to lower this by 4. Fire thaws it at once. Homebrew.", { type: "counter", value: 1, min: 1, max: 10 }),
+    icebound: effect("Stuck in the ice", ICEBOUND_SLUG, "icons/magic/water/ice-crystal-white.webp", UNLIMITED, [
+        { key: "GrantItem", uuid: "Compendium.pf2e.conditionitems.Item.eIcWbB5o3pP6OIMe", allowDuplicate: true, onDeleteActions: { granter: "cascade", grantee: "cascade" } }
+    ], "Frozen in place: immobilized until it Escapes, or the ice under it breaks or melts. Homebrew."),
     shocked: effect("Shocked", SHOCKED_SLUG, "icons/magic/lightning/bolt-strike-blue.webp", { value: 2, unit: "rounds", expiry: "turn-end", sustained: false }, [
         { key: "FlatModifier", selector: "ac", type: "circumstance", value: -2, label: "Shocked", predicate: ["origin:item:trait:electricity"] },
         { key: "FlatModifier", selector: "saving-throw", type: "circumstance", value: -2, label: "Shocked", predicate: ["item:trait:electricity"] }

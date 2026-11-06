@@ -2,8 +2,8 @@
 // owner or the GM; the result comes back through PF2e's roll message, matched by its identifier), and the GM's Apply does the rest.
 // State in the message's flags.
 
-import { MODULE_ID, STATE_EFFECTS, coreForcedMove, escapeHTML, isActiveGM, paintSquares, surfacesOf } from "./foundry.js";
-import { onOilPainted } from "./terrain.js";
+import { ICEBOUND_SLUG, MODULE_ID, STATE_EFFECTS, coreForcedMove, creatureOf, escapeHTML, isActiveGM, paintSquares, surfacesOf } from "./foundry.js";
+import { bestStatistic, onOilPainted } from "./terrain.js";
 import { finishBurst } from "./objects.js";
 import { noteSlide } from "./carry.js";
 import { BASIC_SAVE } from "../src/reactions.js";
@@ -14,7 +14,7 @@ const CARD = "card";
 export const CONDUCTED = "elements:conducted";
 const DEGREES = { criticalSuccess: "Critical success", success: "Success", failure: "Failure", criticalFailure: "Critical failure", automatic: "Also" };
 const STATISTICS = { reflex: "Reflex", acrobatics: "Acrobatics" };
-const CONDITION_WORDS = { immobilized: "immobilized", prone: "prone", shocked: "shocked" };
+const CONDITION_WORDS = { immobilized: "immobilized", icebound: "stuck in the ice, immobilized until it Escapes", prone: "prone", shocked: "shocked" };
 
 export const cardOf = (message) => message?.flags?.[MODULE_ID]?.[CARD] ?? null;
 const identifierOf = (messageId, targetId) => `${MODULE_ID}:${messageId}:${targetId}`;
@@ -184,6 +184,35 @@ export function bindThaw(message, html) {
     });
 }
 
+// Stuck in the ice: its Escape, against the DC that froze it, as often as it likes.
+async function postEscape(token, dc) {
+    await ChatMessage.create({ speaker: { alias: "Elements" }, content: `<div class="pf2e-elements-card"><p>${escapeHTML(token.name)} is stuck in the ice, until it Escapes or the ice breaks or melts.</p><button type="button" data-elements-escape><i class="fa-solid fa-person-running"></i> Escape, DC ${dc}</button></div>`, flags: { [MODULE_ID]: { escape: { uuid: token.uuid, dc } } } });
+}
+
+export function bindEscape(message, html) {
+    const escape = message.flags?.[MODULE_ID]?.escape;
+    if (!escape) return;
+    const button = html.querySelector("[data-elements-escape]");
+    if (!button) return;
+    const actor = fromUuidSync(escape.uuid)?.actor;
+    if (!actor?.isOwner) return button.remove();
+    button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        const statistic = actor.getStatistic(bestStatistic(actor, ["acrobatics", "athletics"]));
+        const roll = await statistic.roll({ dc: { value: escape.dc, label: "Stuck in the ice DC" }, skipDialog: true });
+        if ((roll?.degreeOfSuccess ?? roll?.options?.degreeOfSuccess ?? 0) >= 2) await setState(actor, "icebound", false);
+    });
+}
+
+// The ice under a creature stuck in it broke, melted or was left behind: it's free.
+export async function releaseFromIce(scene) {
+    if (!isActiveGM() || !scene) return;
+    const stuck = [...scene.tokens].filter((token) => token.actor?.itemTypes?.effect?.some((item) => item.slug === ICEBOUND_SLUG));
+    if (!stuck.length) return;
+    const ice = new Set(surfacesOf(scene).filter((surface) => surface.material === "ice").flatMap((surface) => surface.squares));
+    for (const token of stuck) if (!creatureOf(token).squares.some((key) => ice.has(key))) await setState(token.actor, "icebound", false);
+}
+
 // Ice: the rest of a forced move, away from where it began.
 async function slide(token, push) {
     const forcedMove = coreForcedMove();
@@ -198,6 +227,7 @@ export async function applyCard(message) {
     const state = cardOf(message);
     const DamageRoll = damageRollClass();
     const targets = [];
+    const stuck = [];
     for (const target of state.targets) {
         if (target.applied || (state.check && !target.degree)) {
             targets.push(target);
@@ -212,7 +242,9 @@ export async function applyCard(message) {
             if (formulas.length && DamageRoll) await actor.applyDamage({ damage: await new DamageRoll(formulas.length === 1 ? formulas[0] : `{${formulas.join(",")}}`).evaluate(), token, rollOptions: new Set([CONDUCTED]) });
             const row = state.degrees?.[target.degree ?? "automatic"] ?? {};
             if (row.persistent && DamageRoll) await actor.applyDamage({ damage: await new DamageRoll(`(${row.persistent})[persistent,${state.element}]`).evaluate(), token, rollOptions: new Set([CONDUCTED]) });
-            if (row.condition) await addCondition(actor, row.condition);
+            // (Stuck in the ice comes once the ice is there.)
+            if (row.condition === "icebound") stuck.push({ actor, token });
+            else if (row.condition) await addCondition(actor, row.condition);
             if (row.stack) {
                 await stackState(actor, row.stack.key, row.stack.by);
                 if (row.stack.key === "frozen") await postThaw(token);
@@ -228,6 +260,10 @@ export async function applyCard(message) {
     const scene = game.scenes.get(state.sceneId);
     if (scene && state.to !== undefined && !state.done && state.squares?.length) await paintSquares(scene, state.squares, state.to);
     if (scene && !state.done) for (const change of state.changes ?? []) await paintSquares(scene, change.keys, change.to);
+    for (const { actor, token } of stuck) {
+        await setState(actor, "icebound", true);
+        await postEscape(token, state.check?.dc);
+    }
     if (scene && state.burst && !state.done) await finishBurst(scene, state);
     await writeState(message, { ...state, targets, done: targets.every((target) => target.applied) });
 }
