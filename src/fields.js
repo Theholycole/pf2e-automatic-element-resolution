@@ -23,7 +23,7 @@ export function fieldEffect(element) {
             ...(HAS_TYPE.has(element) ? [{ key: "Resistance", type: element, value: SCALED }] : []),
             ...weakTo.map((other) => ({ key: "Weakness", type: other, value: SCALED }))
         ],
-        description: `Inside a ${element} field: half its level (at least 1) as a status bonus to damage from ${element} effects${HAS_TYPE.has(element) ? `, that much ${element} resistance` : ""}${weakTo.length ? `, and that much weakness to ${weakTo.join(" and ")}` : ""}. Homebrew.`
+        description: `Inside ${/^[aeiou]/.test(element) ? "an" : "a"} ${element} field: half its level (at least 1) as a status bonus to damage from ${element} effects${HAS_TYPE.has(element) ? `, that much ${element} resistance` : ""}${weakTo.length ? `, and that much weakness to ${weakTo.join(" and ")}` : ""}. Homebrew.`
     };
 }
 

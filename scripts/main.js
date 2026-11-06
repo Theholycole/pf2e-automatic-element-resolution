@@ -8,12 +8,14 @@ import { installNeutralFields, syncSceneField } from "./fields.js";
 import { migrateSurfaces, onSurfaceDeleted, regionEvent } from "./terrain.js";
 import { onTokenMoved, onTurnChange } from "./carry.js";
 import { ENVIRONMENT_ID, syncRain } from "./environment.js";
+import { installHover } from "./hover.js";
 
 const safely = (handler) => (...args) => Promise.resolve().then(() => handler(...args)).catch((error) => console.error(`${MODULE_ID} |`, error));
 
 Hooks.once("init", () => {
     registerSettings();
     CONFIG.pf2eElementResolution = { regionEvent };
+    installHover();
 });
 
 Hooks.once("setup", () => installNeutralFields());

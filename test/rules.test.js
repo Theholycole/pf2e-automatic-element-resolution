@@ -9,6 +9,7 @@ import { creaturePlans, elementsFrom, leavePlan, levelDC, shareOf, surfacePlans 
 import { carriedElements, enteredSquares, needsCard, pathSquares, trailPlans, weaknessPlan } from "../src/carry.js";
 import { environmentMaterial } from "../src/surfaces.js";
 import { rainPuddles, roundPlan, tickSurfaces } from "../src/ticks.js";
+import { surfaceInfo } from "../src/hover.js";
 import { balancePlan, effectRulesFor, greasePlan, hazardAmount, hazardPlan, steady, terrainRules } from "../src/terrain.js";
 
 const row = (y, from, to) => Array.from({ length: to - from + 1 }, (_, i) => squareKey(from + i, y));
@@ -485,4 +486,17 @@ test("ground that deals damage doesn't get a second card for its traits", () => 
 test("what beats the new traits clears the ground", () => {
     const first = (element, material) => surfacePlans({ elements: [{ element, amount: 5 }], contact: ["0,0"], surfaces: [{ id: "s", material, squares: ["0,0"] }], creatures: [], dc: 20 })[0];
     for (const [element, material] of [["void", "acid"], ["air", "bramble"], ["poison", "bramble"], ["air", "glass"], ["wood", "glass"]]) assert.equal(first(element, material).to, null, `${element} on ${material}`);
+});
+
+test("hover info: a surface's rules, its traits and what elements do to it", () => {
+    const brambles = surfaceInfo("bramble");
+    assert.equal(brambles.title, "Brambles");
+    assert.equal(brambles.lines[0], "3d6 piercing for each square entered.");
+    assert.deepEqual(brambles.traits, ["plant", "wood"]);
+    assert.ok(brambles.reactions.includes("Fire: burning"));
+    assert.ok(brambles.reactions.includes("Air: clears it"));
+    assert.equal(surfaceInfo("lava").lines[0], "3d6 fire for each square entered and at each turn's start, and 2d6 persistent fire.");
+    assert.deepEqual(surfaceInfo("metal").lines, ["Nothing until an element touches it."]);
+    assert.deepEqual(surfaceInfo("water", { fixed: true }).reactions, ["Electricity: conducts"]);
+    assert.ok(surfaceInfo("water").reactions.includes("Cold: ice"));
 });

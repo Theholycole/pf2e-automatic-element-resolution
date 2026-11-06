@@ -14,3 +14,9 @@
 .pf2e-elements-tabs { display: flex; gap: 0.25rem; margin-bottom: 0.5rem; }
 .pf2e-elements-tabs button.active { outline: 2px solid var(--color-warm-2, #ff6400); }
 .pf2e-elements-leave { width: 100%; margin-top: 0.25rem; }
+.pf2e-elements-hover { position: fixed; z-index: 1000; max-width: 20rem; padding: 0.4rem 0.6rem; pointer-events: none; color: #f0f0e0; background: rgba(20, 20, 24, 0.92); border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 4px; font-size: 0.85rem; }
+.pf2e-elements-hover[hidden] { display: none; }
+.pf2e-elements-hover h4 { margin: 0 0 0.15rem; color: inherit; border: none; font-size: 1rem; }
+.pf2e-elements-hover h4:not(:first-child) { margin-top: 0.4rem; }
+.pf2e-elements-hover p { margin: 0.1rem 0; }
+.pf2e-elements-hover-note { opacity: 0.75; font-size: 0.8rem; }

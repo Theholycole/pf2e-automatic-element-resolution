@@ -6,6 +6,8 @@ This Foundry VTT module for PF2e makes the battlefield react to elements. Everyt
 
 Open **Elements** from the token tools, pick a surface, and click or drag on the scene. Touching squares of one material count as one body.
 
+Hovering over a square says what's on it: its surface or field, its rules, its traits and what elements do to it. Each client can turn this off in the module's settings.
+
 ## Reactions
 
 When an element touches a surface or a creature, a card proposes what happens. Each creature rolls its own save from the card, and the GM's Apply does the rest.
