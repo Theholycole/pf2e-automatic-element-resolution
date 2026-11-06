@@ -27,7 +27,7 @@ When an element touches a surface or a creature, a card proposes what happens. E
 
 Fliers don't touch the ground's surfaces. Reach, lightning's share, burst damage and the DC on surfaces are world settings.
 
-Air also blows out fire and dries mud. From the element chart: earth turns water to mud, smothers fire and crushes ice to rubble; plants drink up water and mud; water grows plants into a thicket; cold and poison kill plants back; metal and sonic shatter ice; acid eats metal; light and darkness cancel each other; light and vitality clear deathly ground; void and darkness wither living ground. A world setting lets the chart decide pairs with no reaction of their own.
+Air also blows out fire and dries mud. From the element chart: earth turns water to mud, smothers fire and crushes ice to rubble; plants drink up water and mud; water grows plants into a thicket; cold and poison kill plants back; metal and sonic shatter ice; acid eats metal; light and darkness cancel each other; light and vitality clear deathly ground; void and darkness wither living ground. Air and poison destroy brambles, air and wood remove broken glass, and void stills an acid pool. A world setting lets the chart decide pairs with no reaction of their own.
 
 ## What surfaces do
 
@@ -118,7 +118,7 @@ An area effect's card offers to leave its element's surface: Sow for wood and pl
 
 ## Weakness to the ground
 
-A creature weak to a surface's trait takes damage equal to that weakness when it moves through the surface or starts its turn there, on a card (its highest such weakness, once per move or turn). Personal Rain Cloud does the same for water; extending it to every surface is homebrew.
+A creature weak to a surface's trait takes damage equal to that weakness when it moves through the surface or starts its turn there, on a card (its highest such weakness, for each square moved through, or once for a turn). Ground that deals damage has this on its own card instead: its highest weakness and resistance to the damage type or the ground's traits count for each square entered. So wood resistance helps in brambles, and poison or acid resistance helps in an acid pool. That covers fields too. Personal Rain Cloud does the same for water; extending it to every surface is homebrew.
 
 | Surface | Traits |
 | --- | --- |
@@ -135,8 +135,10 @@ A creature weak to a surface's trait takes damage equal to that weakness when it
 | Brambles, tall grass, flowers | Plant, wood |
 | Gale | Air |
 | Dust cloud | Earth, air |
+| Acid pool | Poison |
+| Broken glass | Earth |
 
-Burning and deathly ground deal fire and void damage, so PF2e applies those weaknesses itself.
+Burning, ember, poison and deathly ground have those damage types, so the same counting applies to them.
 
 ## Undoing a move
 

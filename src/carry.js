@@ -2,7 +2,7 @@
 // ground stays as it is. Homebrew. Pure.
 
 import { elementsFrom, surfacePlans } from "./reactions.js";
-import { SURFACES, SURFACE_TRAITS, squareKey } from "./surfaces.js";
+import { HAZARD_GROUND, SURFACES, SURFACE_TRAITS, squareKey } from "./surfaces.js";
 
 // What a creature carries: its traits, and its persistent damage's types. [{ element, amount: 0 }]
 export const carriedElements = ({ traits = [], persistent = [] } = {}) => elementsFrom({ traits: [...traits, ...persistent] });
@@ -46,7 +46,7 @@ export function weaknessPlan({ creature, weaknesses = [], contact = [], surfaces
     let squares = 0;
     for (const surface of surfaces) {
         const touched = surface.squares.filter((key) => contact.includes(key)).length;
-        if (!touched) continue;
+        if (!touched || HAZARD_GROUND.has(surface.material)) continue;
         for (const weakness of weaknesses) {
             if (!(SURFACE_TRAITS[surface.material] ?? []).includes(weakness.type) || !(weakness.value > 0)) continue;
             const hits = perSquare ? touched : 1;

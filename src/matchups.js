@@ -23,6 +23,6 @@ export const beatenBy = (element) => {
 };
 
 // Each surface's own element.
-const SURFACE_ELEMENTS = { water: "water", steam: "water", ice: "cold", snow: "cold", frostfog: "cold", burning: "fire", lava: "fire", embers: "fire", plants: "wood", thicket: "wood", grass: "wood", bramble: "wood", flowers: "life", mud: "earth", rubble: "earth", sand: "earth", dust: "earth", gale: "air", metal: "metal", darkness: "darkness", light: "light", death: "void", miasma: "void", toxic: "poison", life: "life" };
+const SURFACE_ELEMENTS = { water: "water", steam: "water", ice: "cold", snow: "cold", frostfog: "cold", burning: "fire", lava: "fire", embers: "fire", plants: "wood", thicket: "wood", grass: "wood", bramble: "wood", flowers: "life", mud: "earth", rubble: "earth", sand: "earth", dust: "earth", gale: "air", metal: "metal", darkness: "darkness", light: "light", death: "void", miasma: "void", toxic: "poison", life: "life", acid: "poison", glass: "earth" };
 
 export const breaksSurface = (element, material) => (STRONG_AGAINST[element] ?? []).includes(SURFACE_ELEMENTS[material]);

@@ -9,7 +9,7 @@ import { creaturePlans, elementsFrom, leavePlan, levelDC, shareOf, surfacePlans 
 import { carriedElements, enteredSquares, needsCard, pathSquares, trailPlans, weaknessPlan } from "../src/carry.js";
 import { environmentMaterial } from "../src/surfaces.js";
 import { rainPuddles, roundPlan, tickSurfaces } from "../src/ticks.js";
-import { balancePlan, effectRulesFor, greasePlan, hazardPlan, steady, terrainRules } from "../src/terrain.js";
+import { balancePlan, effectRulesFor, greasePlan, hazardAmount, hazardPlan, steady, terrainRules } from "../src/terrain.js";
 
 const row = (y, from, to) => Array.from({ length: to - from + 1 }, (_, i) => squareKey(from + i, y));
 const puddle = { id: "water", material: "water", squares: row(0, 0, 3) };
@@ -459,4 +459,30 @@ test("every script loads", async () => {
     globalThis.game = {};
     globalThis.CONST = {};
     await import("../scripts/main.js");
+});
+
+test("a hazard's card: weakness and resistance count for each square, by damage type or trait", () => {
+    const hazard = (material, squares) => hazardPlan(terrainRules(material), { id: "t", name: "Goblin" }, squares).hazard;
+    assert.deepEqual(hazard("bramble", 2), { hits: 2, type: "piercing", traits: ["plant", "wood"] });
+    assert.deepEqual(hazard("acid", 5).traits, ["poison"]);
+    assert.deepEqual(hazard("glass", 5).traits, ["earth"]);
+    // (PF2e adds the damage type's weakness once and takes off its resistance once, after this.)
+    assert.equal(hazardAmount(5, hazard("burning", 5), { weaknesses: [{ type: "fire", value: 3 }] }), 17, "5 + 3 five times, less PF2e's 3");
+    assert.equal(hazardAmount(21, hazard("bramble", 2), { weaknesses: [{ type: "wood", value: 4 }] }), 29, "by its trait, which PF2e doesn't see");
+    assert.equal(hazardAmount(21, hazard("bramble", 2), { resistances: [{ type: "wood", value: 3 }] }), 15);
+    assert.equal(hazardAmount(21, hazard("bramble", 2), { resistances: [{ type: "piercing", value: 3 }] }), 18, "21 less 3 twice, plus PF2e's 3 to take off");
+    assert.equal(hazardAmount(7, hazard("acid", 5), { resistances: [{ type: "poison", value: 2 }] }), 0, "no hit gets through");
+    assert.equal(hazardAmount(21, hazard("bramble", 2), { weaknesses: [{ type: "wood", value: 4 }, { type: "piercing", value: 2 }] }), 27, "the highest, and PF2e adds its 2");
+    assert.equal(hazardAmount(21, hazard("bramble", 2)), 21);
+});
+
+test("ground that deals damage doesn't get a second card for its traits", () => {
+    const creature = { id: "c", name: "Goblin" };
+    const surfaces = [{ material: "bramble", squares: ["0,0"] }, { material: "frostfog", squares: ["1,0"] }];
+    assert.equal(weaknessPlan({ creature, weaknesses: [{ type: "wood", value: 5 }, { type: "water", value: 5 }], contact: ["0,0", "1,0"], surfaces }), null);
+});
+
+test("what beats the new traits clears the ground", () => {
+    const first = (element, material) => surfacePlans({ elements: [{ element, amount: 5 }], contact: ["0,0"], surfaces: [{ id: "s", material, squares: ["0,0"] }], creatures: [], dc: 20 })[0];
+    for (const [element, material] of [["void", "acid"], ["air", "bramble"], ["poison", "bramble"], ["air", "glass"], ["wood", "glass"]]) assert.equal(first(element, material).to, null, `${element} on ${material}`);
 });

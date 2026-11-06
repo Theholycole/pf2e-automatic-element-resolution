@@ -7,6 +7,7 @@ import { onOilPainted } from "./terrain.js";
 import { finishBurst } from "./objects.js";
 import { noteSlide } from "./carry.js";
 import { BASIC_SAVE } from "../src/reactions.js";
+import { hazardAmount } from "../src/terrain.js";
 import { SURFACES } from "../src/surfaces.js";
 
 const CARD = "card";
@@ -26,7 +27,7 @@ export async function postPlan(plan, scene, { from = null, once = null, fromMove
         else damage.push({ type: part.type, amount: part.amount });
     }
     const targets = (plan.targets ?? []).map((id) => scene.tokens.get(id)).filter((token) => token?.actor).map((token) => ({ id: token.id, tokenUuid: token.uuid, actorUuid: token.actor.uuid, name: token.name, degree: null, total: null, applied: false }));
-    const state = { key: plan.key, title: plan.title, sceneId: scene.id, from, once, fromMove, element: plan.element, damage, check: plan.check, penalties: plan.penalties ?? {}, degrees: plan.degrees ?? {}, conducted: Boolean(plan.conducted), targets, squares: plan.squares ?? [], material: plan.material ?? null, to: plan.to, add: plan.add ?? [], remove: plan.remove ?? [], notes: plan.notes ?? [], changes: plan.changes ?? [], leave: plan.leave ?? [], leaveMaterial: plan.leaveMaterial ?? "water", doubled: plan.doubled ?? [], burst: plan.burst ?? null, push: plan.push ?? null, done: false };
+    const state = { key: plan.key, title: plan.title, sceneId: scene.id, from, once, fromMove, element: plan.element, damage, check: plan.check, penalties: plan.penalties ?? {}, degrees: plan.degrees ?? {}, conducted: Boolean(plan.conducted), targets, squares: plan.squares ?? [], material: plan.material ?? null, to: plan.to, add: plan.add ?? [], remove: plan.remove ?? [], notes: plan.notes ?? [], hazard: plan.hazard ?? null, changes: plan.changes ?? [], leave: plan.leave ?? [], leaveMaterial: plan.leaveMaterial ?? "water", doubled: plan.doubled ?? [], burst: plan.burst ?? null, push: plan.push ?? null, done: false };
     return ChatMessage.create({ content: cardHTML(state), speaker: { alias: "Elements" }, flags: { [MODULE_ID]: { [CARD]: state } } });
 }
 
@@ -206,7 +207,7 @@ export async function applyCard(message) {
         const actor = token?.actor;
         if (actor) {
             const share = (!state.check ? 1 : state.check.basic ? BASIC_SAVE[target.degree] ?? 1 : 1) * (state.doubled?.includes(target.id) ? 2 : 1);
-            const formulas = (state.damage ?? []).map((part) => [Math.floor(part.amount * share), part.type]).filter(([amount]) => amount > 0).map(([amount, type]) => `${amount}[${type}]`);
+            const formulas = (state.damage ?? []).map((part) => [state.hazard ? hazardAmount(part.amount, state.hazard, actor.attributes ?? {}) : Math.floor(part.amount * share), part.type]).filter(([amount]) => amount > 0).map(([amount, type]) => `${amount}[${type}]`);
             // (The conducted mark: this damage can't set off another conduction.)
             if (formulas.length && DamageRoll) await actor.applyDamage({ damage: await new DamageRoll(formulas.length === 1 ? formulas[0] : `{${formulas.join(",")}}`).evaluate(), token, rollOptions: new Set([CONDUCTED]) });
             const row = state.degrees?.[target.degree ?? "automatic"] ?? {};

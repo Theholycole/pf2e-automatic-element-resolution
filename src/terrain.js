@@ -13,7 +13,7 @@
 //   water and metal: nothing until an element touches them.
 
 import { featureRules, sureFooted } from "../../pf2e-resolution-core/src/environment/terrain.js";
-import { SURFACES } from "./surfaces.js";
+import { SURFACES, SURFACE_TRAITS } from "./surfaces.js";
 
 // Damage for each hit. Cole's call (2026-11-06), on the Combat Simulator's spell power scale: two foes each making one 25-foot Stride through it
 // rate as a typical spell at level 5 for plain hazards and level 9 for burning ground, counting their persistent damage. Brambles and lava are
@@ -90,9 +90,18 @@ const timesOver = (formula, times) => (/^\d+$/.test(formula) ? String(Number(for
 // squares: how many it entered on this move, each one a hit of the damage.
 export const hazardPlan = (rules, token, squares = 1) => ({
     key: `hazard-${rules.material}`, element: rules.hazard.type, title: `${token.name} ${rules.hazard.words}${squares > 1 ? ` (${squares} squares)` : ""}`, targets: [token.id], check: null,
-    damage: [{ formula: timesOver(rules.hazard.formula, squares), type: rules.hazard.type }],
+    damage: [{ formula: timesOver(rules.hazard.formula, squares), type: rules.hazard.type }], hazard: { hits: squares, type: rules.hazard.type, traits: SURFACE_TRAITS[rules.material] ?? [] },
     degrees: rules.hazard.persistent ? { automatic: { persistent: rules.hazard.persistent } } : {}, notes: []
 });
+
+// A hazard card's damage, for Apply. Each square entered is really its own hit, rolled together for one card: each one counts the creature's highest
+// weakness and resistance to the damage type or the ground's traits. PF2e then applies those to the damage type once, so that's taken back out here.
+export function hazardAmount(amount, { hits, type, traits = [] }, { weaknesses = [], resistances = [] } = {}) {
+    const highest = (list, types) => Math.max(0, ...list.filter((entry) => types.includes(entry.type)).map((entry) => entry.value));
+    const types = [type, ...traits];
+    const perHit = Math.max(0, amount / hits - highest(resistances, types)) + highest(weaknesses, types);
+    return Math.max(0, Math.floor(perHit * hits) - highest(weaknesses, [type]) + highest(resistances, [type]));
+}
 
 // Whether a creature's own ignoring of this ground keeps it on its feet (no Balance, not off-guard). ignored: { difficult, greater }.
 export const steady = (rules, ignored) => Boolean(rules.feature) && sureFooted(rules.feature, ignored);

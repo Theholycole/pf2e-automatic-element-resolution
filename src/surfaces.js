@@ -32,13 +32,16 @@ export const SURFACES = {
     dust: { label: "Dust cloud", color: "#b5a58a", cloud: true, drifts: true }
 };
 
-// The traits a surface shares with a creature's weakness, among PF2e's weakness types. Burning and deathly ground aren't here: their damage
-// is already fire and void, and PF2e applies those weaknesses itself.
+// The traits a surface shares with a creature's weakness or resistance, among PF2e's types. Burning and deathly ground aren't here: their damage
+// is already fire and void.
 export const SURFACE_TRAITS = {
     water: ["water"], steam: ["water"], ice: ["cold", "water"], mud: ["water", "earth"], rubble: ["earth"], plants: ["plant", "wood"], thicket: ["plant", "wood"],
     metal: ["metal"], light: ["light"], life: ["vitality"], sand: ["earth"], snow: ["cold", "water"], bramble: ["plant", "wood"], grass: ["plant", "wood"], flowers: ["plant", "wood"],
-    gale: ["air"], frostfog: ["cold", "water"], dust: ["earth", "air"]
+    gale: ["air"], frostfog: ["cold", "water"], dust: ["earth", "air"], acid: ["poison"], glass: ["earth"]
 };
+
+// Ground that deals its own damage: its card counts weakness and resistance to its traits, for each square entered.
+export const HAZARD_GROUND = new Set(["burning", "death", "bramble", "glass", "lava", "acid", "embers", "toxic", "miasma", "frostfog"]);
 
 // The environment module's terrain, by its feature's key. Fixed: deep or flowing water, which conducts but doesn't boil or freeze away.
 const ENVIRONMENT_FEATURES = {
