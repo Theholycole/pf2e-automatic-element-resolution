@@ -11,8 +11,9 @@ import { SURFACES } from "../src/surfaces.js";
 import { carriedElements, enteredSquares, needsCard, pathSquares, trailPlans, weaknessPlan } from "../src/carry.js";
 
 const elementsOf = (actor) => carriedElements({
-    // (An effect's traits count as the creature's: Wet is water, and so is a spell's effect with the water trait.)
-    traits: [...(actor?.traits ?? actor?.system?.traits?.value ?? []), ...(actor?.itemTypes?.effect ?? []).flatMap((effect) => effect.system?.traits?.value ?? [])],
+    // (An effect's traits count as the creature's: Wet is water, and so is a spell's effect with the water trait. Wet from the rain doesn't: the rain itself
+    // does that to the ground.)
+    traits: [...(actor?.traits ?? actor?.system?.traits?.value ?? []), ...(actor?.itemTypes?.effect ?? []).filter((effect) => !effect.flags?.[MODULE_ID]?.rain).flatMap((effect) => effect.system?.traits?.value ?? [])],
     persistent: (actor?.itemTypes?.condition ?? []).filter((condition) => condition.slug === "persistent-damage").map((condition) => condition.system?.persistent?.damageType)
 });
 

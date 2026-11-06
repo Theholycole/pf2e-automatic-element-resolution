@@ -247,7 +247,8 @@ test("fixed water conducts but doesn't boil; the environment module's terrain ma
 test("rain: fires go out unless they're lasting, and none spread", () => {
     const surfaces = [{ material: "burning", squares: ["0,0", "5,5"], ages: {}, lasting: ["5,5"] }, { material: "plants", squares: ["1,0"] }];
     const { changes } = tickSurfaces(surfaces, { lives: { burning: 9 }, d20: () => 20, rain: true });
-    assert.deepEqual(changes, [{ material: "burning", to: null, keys: ["0,0"], words: "The rain puts out the fire (1 square)." }]);
+    assert.deepEqual(changes.find((change) => change.material === "burning"), { material: "burning", to: null, keys: ["0,0"], words: "The rain puts out the fire (1 square)." });
+    assert.equal(changes.some((change) => change.to === "burning"), false, "none spread");
 });
 
 test("new elements: words and aliases", () => {
@@ -521,4 +522,18 @@ test("an object's burst scales with its level", () => {
     assert.equal(burstFormula(25), "23d6");
     assert.match(objectInfo(OBJECTS["fire-barrel"], 5).lines[0], /At level 5: 4d6 fire in 15 feet, basic Reflex\. It leaves burning\./);
     assert.match(stormInfo(STORMS.lightning, "4d6").lines[0], /4d6 electricity in 5 feet/);
+});
+
+test("weather counts as its element on what's under it, except what's fixed", () => {
+    const material = (name, keys, extra = {}) => ({ material: name, squares: keys, ages: {}, ...extra });
+    const change = (changes, name) => changes.find((each) => each.material === name);
+    const rained = tickSurfaces([material("plants", ["0,0", "1,0"]), material("sand", ["2,0"]), material("lava", ["3,0"], { fixed: true })], { lives: {}, rain: new Set(["0,0", "2,0", "3,0"]) }).changes;
+    assert.deepEqual([change(rained, "plants").to, change(rained, "plants").keys], ["thicket", ["0,0"]]);
+    assert.equal(change(rained, "plants").words, "The plants grow into a thicket (1 square).");
+    assert.equal(change(rained, "sand").to, "mud");
+    assert.equal(change(rained, "lava"), undefined);
+    const cold = tickSurfaces([material("plants", ["0,0"]), material("water", ["1,0"])], { lives: {}, freezing: new Set(["0,0", "1,0"]) }).changes;
+    assert.equal(change(cold, "plants").to, null);
+    assert.deepEqual(cold.filter((each) => each.material === "water").map((each) => each.to), ["ice"], "water freezes once");
+    assert.deepEqual(tickSurfaces([material("plants", ["0,0"])], { lives: {} }).changes, [], "no weather");
 });

@@ -78,7 +78,7 @@ Water effects' cards offer **Leave a puddle**.
 
 ## Creatures change the ground
 
-A creature carries an element if it has that trait, an effect with that trait, or persistent damage of that type. Wet counts as water, Frozen as cold, Shocked as electricity and Limned as light, so a Wet creature thickens plants and puts out fires as it walks. Each square it moves through or starts its turn on reacts: a fire creature or a burning one lights plants and oil, boils water and melts ice, while bare ground doesn't change. Fliers leave the ground alone. It happens on its own unless someone else has to roll, and a world setting makes it ask first.
+A creature carries an element if it has that trait, an effect with that trait, or persistent damage of that type. Wet counts as water, Frozen as cold, Shocked as electricity and Limned as light, so a Wet creature thickens plants and puts out fires as it walks, unless it's only Wet from rain. Each square it moves through or starts its turn on reacts: a fire creature or a burning one lights plants and oil, boils water and melts ice, while bare ground doesn't change. Fliers leave the ground alone. It happens on its own unless someone else has to roll, and a world setting makes it ask first.
 
 ## With the environment module
 
@@ -86,6 +86,7 @@ It's optional. When it's on:
 
 - Its heavy rain soaks unsheltered creatures, which stay Wet while it lasts, and any wet precipitation puts out fires at the end of the round and stops them spreading (GM Core: wet precipitation douses flames).
 - Heavy rain or worse also leaves puddles on bare squares each round (3 by default, a world setting), on the round's card.
+- Weather counts as its element on what's under the sky, on the round's card: wet precipitation acts as water, so plants and grass thicken, sand turns to mud and acid dilutes, and snow or severe cold acts as cold, so plants die back. Wet from rain doesn't change tiles as creatures walk, since the rain already did. Wind doesn't act as air beyond carrying clouds, and heat doesn't act as fire.
 - Rain only falls under the sky: squares open to the map's edge past the walls, and not in Foundry's Suppress Weather regions. Inside, creatures stay dry and fires keep burning. A map walled right round counts as indoors.
 - Its terrain counts as surfaces: ice, undergrowth and hedges, and flames can change, with a hole cut in its region where they do. Its deep and flowing water conducts lightning but doesn't change.
 
