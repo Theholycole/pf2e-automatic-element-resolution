@@ -136,9 +136,9 @@ test("Balance: a failure goes back to where the move began; a critical failure f
     assert.equal(balancePlan(rules, { id: "t" }, "acrobatics").degrees.failure.returnTo, undefined, "no origin: nowhere to send it");
 });
 
-test("burning ground: the world's damage, and persistent fire", () => {
-    const plan = hazardPlan(terrainRules("burning", { hazardFormula: "2d6" }), { id: "t", name: "Goblin" });
-    assert.deepEqual(plan.damage, [{ formula: "2d6", type: "fire" }]);
+test("burning ground: its damage, and persistent fire", () => {
+    const plan = hazardPlan(terrainRules("burning"), { id: "t", name: "Goblin" });
+    assert.deepEqual(plan.damage, [{ formula: "1", type: "fire" }]);
     assert.equal(plan.check, null);
     assert.equal(plan.degrees.automatic.persistent, "1d6");
 });
@@ -278,9 +278,9 @@ test("new surfaces' rules", () => {
     assert.deepEqual(terrainRules("thicket").costs, { walk: 3, climb: 3 });
     assert.match(terrainRules("darkness").effect.rules[0].uuid, /DmAIPqOBomZ7H95W/);
     assert.deepEqual(terrainRules("life").effect.rules, [{ key: "FastHealing", value: 1 }]);
-    const death = hazardPlan(terrainRules("death", { hazardFormula: "2d6" }), { id: "t", name: "Goblin" });
+    const death = hazardPlan(terrainRules("death"), { id: "t", name: "Goblin" });
     assert.equal(death.title, "Goblin withers on the deathly ground");
-    assert.deepEqual(death.damage, [{ formula: "2d6", type: "void" }]);
+    assert.deepEqual(death.damage, [{ formula: "1d2", type: "void" }]);
     assert.deepEqual(death.degrees, {});
     assert.equal(terrainRules("light").effect.rules[0].key, "Note");
 });
@@ -441,8 +441,11 @@ test("fields: a boost and resistance by level, and a cycle", () => {
 test("a move: only the squares entered count, each one a hit", () => {
     const path = pathSquares([{ x: 0, y: 0 }, { x: 300, y: 0 }], 100);
     assert.deepEqual(enteredSquares(path, ["0,0"]), ["1,0", "2,0", "3,0"]);
-    const plan = hazardPlan(terrainRules("burning", { hazardFormula: "2d6" }), { id: "t", name: "Goblin" }, 3);
-    assert.deepEqual(plan.damage, [{ formula: "6d6", type: "fire" }]);
+    const plan = hazardPlan(terrainRules("burning"), { id: "t", name: "Goblin" }, 3);
+    assert.deepEqual(plan.damage, [{ formula: "3", type: "fire" }]);
+    assert.deepEqual(hazardPlan(terrainRules("glass"), { id: "t", name: "Goblin" }, 5).damage, [{ formula: "5d2", type: "piercing" }]);
+    assert.deepEqual(hazardPlan(terrainRules("bramble"), { id: "t", name: "Goblin" }, 2).damage, [{ formula: "6d6", type: "piercing" }]);
+    assert.deepEqual(hazardPlan(terrainRules("lava"), { id: "t", name: "Goblin" }, 2).damage, [{ formula: "6d6", type: "fire" }]);
     assert.match(plan.title, /3 squares/);
     assert.equal(plan.degrees.automatic.persistent, "1d6", "persistent fire doesn't multiply");
     const weak = weaknessPlan({ creature: { id: "c", name: "G" }, weaknesses: [{ type: "water", value: 5 }], contact: ["0,0", "1,0"], surfaces: [{ material: "water", squares: ["0,0", "1,0"] }], perSquare: true });

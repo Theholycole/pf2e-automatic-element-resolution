@@ -1,7 +1,7 @@
 // A surface's rules in play (src/terrain.js): its region's behaviors, the Effect a creature holds inside it, and its events. The script
 // behavior reaches this module through CONFIG, on the active GM's client.
 
-import { MODULE_ID, creatureOf, isActiveGM, ruleSquaresOf, surfaceMaterial, surfaceDC, hazardFormula } from "./foundry.js";
+import { MODULE_ID, creatureOf, isActiveGM, ruleSquaresOf, surfaceMaterial, surfaceDC } from "./foundry.js";
 import { postPlan, stackState } from "./cards.js";
 import { syncSceneField } from "./fields.js";
 import { fieldEffect } from "../src/fields.js";
@@ -13,7 +13,7 @@ const EVENTS = ["tokenEnter", "tokenExit", "tokenTurnStart"];
 const adding = new Set();
 const removing = new Set();
 
-const rulesOf = (region, actor = null) => (fieldOf(region) ? fieldRules(fieldOf(region)) : terrainRules(surfaceMaterial(region), { dc: surfaceDC(actor), hazardFormula: hazardFormula() }));
+const rulesOf = (region, actor = null) => (fieldOf(region) ? fieldRules(fieldOf(region)) : terrainRules(surfaceMaterial(region), { dc: surfaceDC(actor) }));
 const fieldOf = (region) => region?.flags?.[MODULE_ID]?.field ?? null;
 const fieldRules = (element) => {
     const { name, rules, description } = fieldEffect(element);

@@ -85,7 +85,7 @@ async function enterGround(token, movement, inAir, onGround) {
         const entered = (SURFACES[surface.material]?.cloud ? inAir : onGround).filter((key) => surface.squares.includes(key) && !seen.paid.has(`${surface.material}:${key}`));
         if (!entered.length) continue;
         entered.forEach((key) => seen.paid.add(`${surface.material}:${key}`));
-        const rules = terrainRules(surface.material, { dc: surfaceDC(token.actor), hazardFormula: hazardFormula() });
+        const rules = terrainRules(surface.material, { dc: surfaceDC(token.actor) });
         if (rules.balance && !forced && !seen.balanced.has(surface.material) && !steady(rules, ignoredOf(token.actor))) {
             seen.balanced.add(surface.material);
             await postPlan(balancePlan(rules, token, bestStatistic(token.actor, rules.balance.statistics), seen.origin), scene, { fromMove: token.id });

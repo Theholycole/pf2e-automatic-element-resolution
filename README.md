@@ -25,7 +25,7 @@ When an element touches a surface or a creature, a card proposes what happens. E
 | Fire | A wet creature | It dries off |
 | Cold | A wet creature | Reflex, or −10 feet of Speed for a round (immobilized on a critical failure) |
 
-Fliers don't touch the ground's surfaces. Reach, lightning's share, burning ground's damage and the DC on surfaces are world settings.
+Fliers don't touch the ground's surfaces. Reach, lightning's share, burst damage and the DC on surfaces are world settings.
 
 Air also blows out fire and dries mud. From the element chart: earth turns water to mud, smothers fire and crushes ice to rubble; plants drink up water and mud; water grows plants into a thicket; cold and poison kill plants back; metal and sonic shatter ice; acid eats metal; light and darkness cancel each other; light and vitality clear deathly ground; void and darkness wither living ground. A world setting lets the chart decide pairs with no reaction of their own.
 
@@ -37,22 +37,25 @@ Air also blows out fire and dries mud. From the element chart: earth turns water
 | Plants | GM Core's light undergrowth: difficult terrain, and a creature can Take Cover |
 | Oil | Grease: Balance to move onto it, with Reflex or Acrobatics, unless it Steps or Crawls |
 | Steam | Mist: concealed inside it |
-| Burning ground | Fire damage for each square entered and at each turn's start, and 1d6 persistent fire (a card each time) |
+| Burning ground | 1 fire damage for each square entered and at each turn's start, and 1d6 persistent fire (a card each time) |
 | Thicket | GM Core's heavy undergrowth: greater difficult terrain and cover |
 | Mud | GM Core's shallow bog: difficult terrain |
 | Rubble | GM Core's rubble: difficult terrain |
 | Darkness | Concealed inside it |
-| Deathly ground | Void damage on entering and at each turn's start (a card each time; the undead aren't affected) |
+| Deathly ground | 1d2 void damage for each square entered and at each turn's start (a card each time; the undead aren't affected) |
 | Living ground | Fast healing 1 inside it |
 | Light | Limned inside it: it can't be concealed |
 | Sand, snow | GM Core: difficult terrain |
-| Brambles, broken glass | Piercing damage for each move into it; brambles are difficult terrain too |
+| Brambles | 3d6 piercing damage for each square entered, and difficult terrain |
+| Broken glass | 1d2 piercing damage for each square entered |
 | Tall grass, dust cloud | Concealed inside it |
 | Flowers | Fast healing 1 inside it |
-| Lava | Double fire damage on entering and at each turn's start, and 2d6 persistent fire |
-| Acid pool, ember, poison, death and frost clouds | Damage of that type on entering and at each turn's start; frost fog conceals too |
+| Lava | 3d6 fire damage for each square entered and at each turn's start, 2d6 persistent fire, and difficult terrain |
+| Acid pool, ember, poison, death and frost clouds | 1d2 damage of that type for each square entered and at each turn's start; frost fog conceals too |
 | Gale | Difficult terrain for fliers, −1 to ranged attacks from inside |
 | Water, metal | Nothing until an element touches them |
+
+Damaging ground is set by Combat Simulator ratings: plain hazards, burning ground, brambles and lava rate as a typical spell at levels 5, 9, 13 and 17, for two foes making one 25-foot Stride. Their damage doesn't change with level.
 
 Painting oil where a creature stands gives it a card: Reflex or Acrobatics, or fall prone, as Grease.
 
