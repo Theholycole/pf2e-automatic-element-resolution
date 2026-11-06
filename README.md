@@ -84,7 +84,7 @@ See `docs/design.md` for how it works.
 
 ## States that reward setting things up
 
-- **Oil:** moving through oil, starting a turn in it, or having it painted under you adds a stack. A stack of any size is a −5-foot status penalty to Speeds. The next fire damage turns every stack into 1d6 persistent fire each, so 3 stacks is 3d6. Water washes it off. Grease and thrown Oil (1 pint) both make it.
+- **Oil:** moving through oil, starting a turn in it, or having it painted under you adds a stack. A stack of any size is a −5-foot status penalty to Speeds. The next fire damage turns every stack into 1d6 persistent fire each, so 3 stacks is 3d6. Water washes it off. Casting Grease or throwing Oil (1 pint) offers to make it: Grease has no area in PF2e's data, so its card lays 4 squares at your target, or you paint them.
 - **Wet + lightning:** a Wet creature takes double conducted damage, and anyone who fails is Shocked (−2 to AC and saves against electricity for 2 rounds).
 - **Wet + cold:** Reflex, or Frozen 1, 2 or 4 by degree. Frozen is a −5-foot status penalty to Speeds per point; an Interact lowers it by 4, and fire thaws it at once.
 - **Light:** Limned, so it can't be concealed.

@@ -13,7 +13,7 @@ import { advanceFields } from "./fields.js";
 import { stormRound, stormFireLasts } from "./storms.js";
 import { onOilPainted } from "./terrain.js";
 import { paintSquares } from "./foundry.js";
-import { burstSquares } from "../src/surfaces.js";
+import { burstSquares, squareKey } from "../src/surfaces.js";
 import { goesOff, setOff } from "../src/objects.js";
 import { creaturePlans, elementsFrom, leavePlan, surfacePlans } from "../src/reactions.js";
 import { rainPuddles, roundPlan, tickSurfaces } from "../src/ticks.js";
@@ -64,11 +64,6 @@ export async function onDamageMessage(message) {
     const token = await fromUuid(targetUuid).catch(() => null);
     if (!token?.parent) return;
     const elements = elementsFrom({ damage: message.rolls.flatMap(damageOf), traits: message.flags.pf2e.context.traits });
-    // (Oil, thrown: it splashes on the target, lit or not.)
-    if (message.flags?.pf2e?.origin?.slug === "oil-1-pint" || message.item?.slug === "oil-1-pint") {
-        const creature = creatureOf(token);
-        await postOnce([{ key: "oil-splash", title: "The oil splashes", targets: [], damage: [], leave: creature.squares, leaveMaterial: "oil" }], token.parent, message.id);
-    }
     if (elements.length) await react({ scene: token.parent, token, elements, actor: message.actor, item: message.item, key: message.id });
 }
 
@@ -109,10 +104,26 @@ export async function onRegionCreated(region) {
 
 // An item's use: Sow where it stands, or Harvest what's near. Items carry what they do in their flags (scripts/items.js).
 export async function onItemUsed(message) {
-    if (!game.users.activeGM?.isSelf) return;
     const uuid = message.flags?.pf2e?.origin?.uuid;
     if (!uuid) return;
     const item = await fromUuid(uuid).catch(() => null);
+    // (Oil, thrown: it splashes on whoever the thrower has targeted, lit or not. Only their own client knows that.)
+    if (item?.slug === "oil-1-pint" && message.isAuthor) {
+        const target = [...game.user.targets][0]?.document;
+        if (target?.parent) await postOnce([{ key: "oil-splash", title: "The oil splashes", targets: [], damage: [], leave: creatureOf(target).squares, leaveMaterial: "oil" }], target.parent, message.id);
+        return;
+    }
+    // (Grease has no area in PF2e's data, since it can also target an object: its 4 squares start at whoever the caster targeted, or the GM paints them.)
+    if (item?.slug === "grease" && message.isAuthor) {
+        const target = [...game.user.targets][0]?.document;
+        const scene = target?.parent ?? item.actor?.getActiveTokens?.(false, true)?.[0]?.parent;
+        if (!scene) return;
+        const [column, row] = target ? creatureOf(target).squares[0].split(",").map(Number) : [];
+        const leave = target ? [squareKey(column, row), squareKey(column + 1, row), squareKey(column, row + 1), squareKey(column + 1, row + 1)] : [];
+        await postOnce([{ key: "grease-cast", title: "Grease makes oil", targets: [], damage: [], leave, leaveMaterial: "oil", notes: [target ? "Or paint its 4 squares from the Elements window." : "Paint its 4 squares from the Elements window, or target a creature first to place them here."] }], scene, message.id);
+        return;
+    }
+    if (!game.users.activeGM?.isSelf) return;
     const use = item?.flags?.[MODULE_ID]?.use;
     const token = item?.actor?.getActiveTokens?.(false, true)?.[0];
     if (!use || !token?.parent) return;

@@ -24,9 +24,10 @@ async function strike(scene, region) {
     const dc = sceneDC(scene);
     const formula = hazardFormula().replace(/^(\d+)d/, (_, count) => `${Number(count) * 2}d`);
     const amount = (await new Roll(formula).evaluate()).total;
-    await postPlan(strikePlan(storm, centre, creatures, { dc, amount }), scene);
+    const hit = strikePlan(storm, centre, creatures, { dc, amount });
+    await postPlan(hit, scene);
     // (It reaches the ground too: lightning through a puddle, fire on oil.)
-    for (const plan of surfacePlans({ elements: [{ element: storm.element, amount }], contact: burstSquares([centre], STRIKE_FEET), surfaces: surfacesOf(scene), creatures, dc, hazardFormula: hazardFormula(), settings: ruleSettings() })) await postPlan(plan, scene);
+    for (const plan of surfacePlans({ elements: [{ element: storm.element, amount }], contact: burstSquares([centre], STRIKE_FEET), surfaces: surfacesOf(scene), creatures, direct: hit.targets, dc, hazardFormula: hazardFormula(), settings: ruleSettings() })) await postPlan(plan, scene);
 }
 
 async function mark(scene, key, centre, round) {
