@@ -19,6 +19,11 @@ export const STORMS = {
 
 export const STRIKE_FEET = 5;
 
+// What the Elements window says about one. formula: a strike's damage.
+export function stormInfo(storm, formula) {
+    return { title: storm.label, lines: [`Each new round marks squares under the sky, and the sky hits them the next round: ${formula} ${storm.type} in ${STRIKE_FEET} feet, basic Reflex.${storm.surface ? ` It leaves ${SURFACES[storm.surface].label.toLowerCase()}.` : ""}${storm.fireLasts ? " Its fires don't burn out." : ""}`] };
+}
+
 export function pickWarnings(squares, count, pick = () => 0) {
     const open = [...squares];
     const keys = [];

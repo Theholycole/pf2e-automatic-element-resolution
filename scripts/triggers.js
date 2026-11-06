@@ -93,7 +93,7 @@ export async function onRegionCreated(region) {
     const item = origin.uuid ? await fromUuid(origin.uuid).catch(() => null) : null;
     const dc = dcFrom(item?.actor, item) ?? sceneDC(scene);
     await postOnce(surfacePlans({ source: sourceOf(item?.actor), elements: all, contact, surfaces: surfacesOf(scene), creatures: creaturesOf(scene), dc, hazardFormula: hazardFormula(), settings: ruleSettings() }), scene, region.id);
-    for (const { token, object } of objectsIn(scene, contact)) if (setOff(object, all)) await burstObject(token, object, { dc });
+    for (const { token, object } of objectsIn(scene, contact)) if (setOff(object, all)) await burstObject(token, object);
     if (game.settings.get(MODULE_ID, "offerSurfaces")) {
         for (const { element } of all) {
             const plan = leavePlan(origin.name ?? "The effect", element, contact, surfacesOf(scene));
@@ -217,7 +217,7 @@ export function onApplyDamage(actor, params) {
     const object = objectOfActor(actor);
     if (object) {
         return () => {
-            if (goesOff(object, elements, actor.hitPoints?.value ?? 1)) burstObject(token, object, { dc: dcFrom(item?.actor ?? message?.actor, item) }).catch((error) => console.error(`${MODULE_ID} |`, error));
+            if (goesOff(object, elements, actor.hitPoints?.value ?? 1)) burstObject(token, object).catch((error) => console.error(`${MODULE_ID} |`, error));
         };
     }
     if (!elements.length) return;

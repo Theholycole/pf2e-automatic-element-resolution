@@ -140,9 +140,10 @@ export function surfacePlans(event) {
                 const reach = reaction.conduct ? conductReach : Infinity;
                 const body = bodyFrom(contact, squares, reach);
                 if (!body.size) continue;
-                // (Only the squares touched, except what spreads: lightning through a body, as far as it reaches, and lit oil or an exploding cloud, all at once.)
+                // (Only the squares touched, except what spreads: lightning through a body, as far as it reaches, and lit oil or an exploding cloud, all at
+                // once. A cloud also moves as one.)
                 const reached = [...body.keys()];
-                const onlyTouched = reaction.onlyTouched || (!reaction.hazard && !reaction.conduct);
+                const onlyTouched = reaction.onlyTouched || (!reaction.hazard && !reaction.conduct && !reaction.drift);
                 const keys = onlyTouched ? reached.filter((key) => contact.includes(key)) : reached;
                 if (!keys.length) continue;
                 const whole = keys;

@@ -34,6 +34,17 @@ export const OBJECTS = Object.fromEntries([
     ...pair("vitality", "vitality", "life", ["void", "poison"], { label: "Holy water barrel", tint: "#b7e38f" }, { label: "Heartflower", img: POD, tint: "#d8f0a8" })
 ].map((entry) => [entry.key, entry]));
 
+// Its burst's d6s by its level, 1st to 20th. Cole's call (2026-11-06), on the Combat Simulator's spell power scale: a basic Reflex save at GM Core's DC for
+// the level, against 2 foes, rates about as a typical spell (within a tenth of a level, more at 1st), so a wider burst that catches 3 rates above it.
+const BURST_DICE = [1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 15, 15, 16, 19, 19, 21, 23];
+export const burstFormula = (level) => `${BURST_DICE[Math.max(0, Math.min(BURST_DICE.length - 1, Math.round(Number(level) || 1) - 1))]}d6`;
+
+// What the Elements window says about it.
+export function objectInfo(object, level) {
+    const leaves = object.surface ? ` It leaves ${SURFACES[object.surface].label.toLowerCase()}.` : "";
+    return { title: object.label, lines: [`At level ${level}: ${burstFormula(level)} ${object.type} in ${object.feet} feet, basic Reflex.${leaves}`, `Hardness ${object.hardness}, ${object.hp} Hit Points. ${object.triggers.map((word, index) => (index ? word : `${word[0].toUpperCase()}${word.slice(1)}`)).join(" or ")} sets it off, however little it deals.`] };
+}
+
 // What an object does when it goes: a save for those within reach, the ground, and a chain to whatever else this sets off.
 export function burstPlan(object, tokenId, centres, creatures, { dc = null, formula = null, name = object.label } = {}) {
     const squares = burstSquares(centres, object.feet);

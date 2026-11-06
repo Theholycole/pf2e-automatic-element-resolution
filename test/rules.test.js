@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { bodyFrom, openSquares, squareKey, touches } from "../src/surfaces.js";
-import { OBJECTS, burstPlan, goesOff, objectsOf, setOff } from "../src/objects.js";
-import { STORMS, pickWarnings, strikePlan } from "../src/storms.js";
+import { OBJECTS, burstFormula, burstPlan, goesOff, objectInfo, objectsOf, setOff } from "../src/objects.js";
+import { STORMS, pickWarnings, stormInfo, strikePlan } from "../src/storms.js";
 import { fieldEffect, nextField } from "../src/fields.js";
 import { creaturePlans, elementsFrom, leavePlan, levelDC, shareOf, surfacePlans } from "../src/reactions.js";
 import { carriedElements, enteredSquares, needsCard, pathSquares, trailPlans, weaknessPlan } from "../src/carry.js";
@@ -364,8 +364,8 @@ test("new ground and clouds react as written", () => {
 test("a cloud: air moves it away from the source; with no source it scatters", () => {
     const cloud = { material: "embers", squares: ["5,0", "6,0"] };
     const [moved] = surfacePlans({ elements: [{ element: "air", amount: 0 }], contact: ["5,0"], surfaces: [cloud], creatures: [], source: { x: 0, y: 0 } });
-    assert.deepEqual(moved.changes[0], { material: "embers", to: null, keys: ["5,0"], words: "" });
-    assert.deepEqual(moved.changes[1].keys, ["7,0"]);
+    assert.deepEqual(moved.changes[0], { material: "embers", to: null, keys: ["5,0", "6,0"], words: "" });
+    assert.deepEqual(moved.changes[1].keys, ["7,0", "8,0"]);
     assert.equal(surfacePlans({ elements: [{ element: "air", amount: 0 }], contact: ["5,0"], surfaces: [cloud], creatures: [] })[0].to, null);
 });
 
@@ -510,4 +510,14 @@ test("an element changes only the squares it touches; lightning and lit oil stil
     const other = { id: "o", squares: ["2,0"], elevation: 0 };
     assert.deepEqual(aimed("electricity", "water", [other])[0].targets, ["o"], "lightning runs through it");
     assert.equal(surfacePlans({ elements: [{ element: "fire", amount: 10 }], contact: ["0,0", "1,0"], surfaces: line("plants"), dc: 20 })[0].squares.length, 2, "an area only takes what it covers");
+});
+
+test("an object's burst scales with its level", () => {
+    assert.equal(burstFormula(1), "1d6");
+    assert.equal(burstFormula(5), "4d6");
+    assert.equal(burstFormula(20), "23d6");
+    assert.equal(burstFormula(0), "1d6");
+    assert.equal(burstFormula(25), "23d6");
+    assert.match(objectInfo(OBJECTS["fire-barrel"], 5).lines[0], /At level 5: 4d6 fire in 15 feet, basic Reflex\. It leaves burning\./);
+    assert.match(stormInfo(STORMS.lightning, "4d6").lines[0], /4d6 electricity in 5 feet/);
 });

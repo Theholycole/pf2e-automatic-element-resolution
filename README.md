@@ -4,7 +4,7 @@ This Foundry VTT module for PF2e makes the battlefield react to elements. Everyt
 
 ## Surfaces
 
-Open **Elements** from the token tools, pick a surface, and click or drag on the scene. Touching squares of one material count as one body.
+Open **Elements** from the token tools, pick a surface, and click or drag on the scene. Hovering over a choice says what it does. Touching squares of one material count as one body.
 
 Hovering over a square says what's on it: its surface or field, its rules, its traits and what elements do to it. Each client can turn this off in the module's settings.
 
@@ -29,7 +29,7 @@ When an element touches a surface or a creature, a card proposes what happens. E
 
 To hit the ground with something single-target, like a Strike or a one-target spell, use **Aim at the ground** on its damage roll or its card, then click a square. Only that square reacts to its element, even with nobody standing on it. Range isn't checked, and neither is the attack roll: that's the GM's call. Escape cancels.
 
-An element only changes the squares it touches: the one it's aimed at, those under a creature it hits, or those its area covers. Three things spread from there: lightning through water or metal, fire through oil, which goes up all at once, and a poison cloud that explodes.
+An element only changes the squares it touches: the one it's aimed at, those under a creature it hits, or those its area covers. Four things go further: lightning runs through water or metal, fire goes through all of the oil at once, a poison cloud explodes all at once, and air moves a whole cloud.
 
 Fliers don't touch the ground's surfaces. Reach, lightning's share, burst damage and the DC on surfaces are world settings.
 
@@ -104,7 +104,7 @@ A forced move that begins on ice goes as far again, on a card. A GM's drag of a 
 
 ## Clouds and air
 
-Ember, poison, death, frost and dust clouds and steam sit at every height and fade after 3 rounds (a world setting). Air moves the part of a cloud it touches 10 feet away from its source, or scatters that part if there isn't one, and the environment module's wind carries them each round. Water turns embers to steam, fire explodes a poison cloud, and life or healing clears a death cloud. A gale is difficult terrain for fliers and −1 to ranged attacks from inside it.
+Ember, poison, death, frost and dust clouds and steam sit at every height and fade after 3 rounds (a world setting). Air moves the whole cloud 10 feet away from its source, or scatters it if there isn't one, and the environment module's wind carries them each round. Water turns embers to steam, fire explodes a poison cloud, and life or healing clears a death cloud. A gale is difficult terrain for fliers and −1 to ranged attacks from inside it.
 
 ## Leaving surfaces, Sow and Harvest
 
@@ -112,7 +112,7 @@ An area effect's card offers to leave its element's surface: Sow for wood and pl
 
 ## Objects
 
-**Objects** has a barrel and something natural for each of 15 elements, like an oil barrel and a pitch pine, or a poison barrel and a choke fungus. Each is a PF2e hazard with real Hardness and Hit Points (Hardness 5 and 20 HP, or Hardness 10 and 40 HP for stone), so ordinary hits rarely break one. The right element bursts it every time, even for 1 damage: basic Reflex for those nearby, and it leaves its surface. A burst can set off the next object.
+**Objects** has a barrel and something natural for each of 15 elements, like an oil barrel and a pitch pine, or a poison barrel and a choke fungus. Each is a PF2e hazard with real Hardness and Hit Points (Hardness 5 and 20 HP, or Hardness 10 and 40 HP for stone), so ordinary hits rarely break one. The right element bursts it every time, even for 1 damage: basic Reflex for those nearby, and it leaves its surface. Set its level in the Objects tab, which starts at your party's: its damage and DC follow that level, so a burst catching 2 creatures rates about as a typical spell of that level in the Combat Simulator's scale, and one catching 3 does better. A burst can set off the next object.
 
 ## Elemental weather
 

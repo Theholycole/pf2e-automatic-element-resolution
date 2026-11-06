@@ -1,9 +1,10 @@
 // Objects on the map (src/objects.js): a PF2e hazard actor for each kind, in a world folder, with Hardness and Hit Points. Damage to one, or an area
 // of the right element, makes its card; the GM's Apply does the damage, leaves the ground, removes it, and sets off what else that reaches.
 
-import { MODULE_ID, creatureOf, creaturesOf, hazardFormula, sceneDC } from "./foundry.js";
+import { MODULE_ID, creatureOf, creaturesOf } from "./foundry.js";
 import { postPlan } from "./cards.js";
-import { OBJECTS, burstPlan, setOff } from "../src/objects.js";
+import { OBJECTS, burstFormula, burstPlan, setOff } from "../src/objects.js";
+import { levelDC } from "../src/reactions.js";
 import { squareKey, touches } from "../src/surfaces.js";
 
 const FOLDER = "Elements: objects";
@@ -27,11 +28,18 @@ async function objectActor(key) {
     });
 }
 
-// Put one on the scene, at these canvas coordinates.
-export async function placeObject(scene, key, x, y) {
+// The level an object takes unless the GM says: the party's, as far as the scene's player characters say, then the world's.
+export function partyLevel(scene) {
+    const levelsOf = (actors) => actors.filter((actor) => actor?.type === "character" && actor.hasPlayerOwner).map((actor) => actor.level);
+    const here = levelsOf([...(scene?.tokens ?? [])].map((token) => token.actor));
+    return Math.max(1, ...(here.length ? here : levelsOf([...game.actors])));
+}
+
+// Put one on the scene, at these canvas coordinates and this level (on its token: the same barrel can be any level).
+export async function placeObject(scene, key, x, y, level = partyLevel(scene)) {
     const actor = await objectActor(key);
     const size = scene.grid.size;
-    const data = (await actor.getTokenDocument({ x: Math.floor(x / size) * size, y: Math.floor(y / size) * size })).toObject();
+    const data = (await actor.getTokenDocument({ x: Math.floor(x / size) * size, y: Math.floor(y / size) * size, delta: { system: { details: { level: { value: level } } } } })).toObject();
     return scene.createEmbeddedDocuments("Token", [data]);
 }
 
@@ -42,13 +50,15 @@ export function objectsIn(scene, squares) {
 
 // Its card. Only one for each object, however many things reach it.
 const bursting = new Set();
-export async function burstObject(token, object, { dc = null } = {}) {
+export async function burstObject(token, object) {
     if (bursting.has(token.uuid)) return;
     bursting.add(token.uuid);
     setTimeout(() => bursting.delete(token.uuid), 10000);
     const scene = token.parent;
     const creatures = creaturesOf(scene).filter((creature) => !objectOfActor(scene.tokens.get(creature.id)?.actor));
-    return postPlan(burstPlan(object, token.id, creatureOf(token).squares, creatures, { dc: dc ?? sceneDC(scene), formula: hazardFormula() }), scene);
+    // (Placed before objects had levels: level 0, so the party's.)
+    const level = token.actor?.level || partyLevel(scene);
+    return postPlan(burstPlan(object, token.id, creatureOf(token).squares, creatures, { dc: levelDC(level), formula: burstFormula(level) }), scene);
 }
 
 // The GM applied it: it's gone, and what this reached that it sets off goes too.
@@ -56,7 +66,7 @@ export async function finishBurst(scene, state) {
     const { tokenId, element, squares } = state.burst;
     const token = scene.tokens.get(tokenId);
     if (token) await token.delete();
-    for (const { token: other, object } of objectsIn(scene, squares)) if (other.id !== tokenId && setOff(object, [{ element }])) await burstObject(other, object, { dc: state.check?.dc });
+    for (const { token: other, object } of objectsIn(scene, squares)) if (other.id !== tokenId && setOff(object, [{ element }])) await burstObject(other, object);
 }
 
 export const squareOfCanvas = (scene, x, y) => squareKey(Math.floor(x / scene.grid.size), Math.floor(y / scene.grid.size));

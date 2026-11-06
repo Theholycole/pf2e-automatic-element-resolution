@@ -1,21 +1,23 @@
 // The GM's Elements window: paint surfaces, place objects, choose the weather, lay fields, and make the items. Picking a surface, object or field
 // and then clicking or dragging on the scene puts it down. Painting a square with what it already is clears it.
 
-import { MODULE_ID, paintSquares, squareAt, surfacesOf } from "./foundry.js";
+import { MODULE_ID, escapeHTML, hazardFormula, paintSquares, squareAt, surfacesOf } from "./foundry.js";
 import { onOilPainted } from "./terrain.js";
-import { placeObject } from "./objects.js";
+import { partyLevel, placeObject } from "./objects.js";
 import { paintField, sceneFieldOf, setCycle, setSceneField, cycleOf } from "./fields.js";
 import { setStorm, stormOf } from "./storms.js";
 import { createItems } from "./items.js";
 import { SURFACES } from "../src/surfaces.js";
-import { OBJECTS } from "../src/objects.js";
-import { STORMS } from "../src/storms.js";
-import { FIELD_ELEMENTS, fieldLabel } from "../src/fields.js";
+import { OBJECTS, objectInfo } from "../src/objects.js";
+import { surfaceInfo } from "../src/hover.js";
+import { STORMS, stormInfo } from "../src/storms.js";
+import { FIELD_ELEMENTS, fieldEffect, fieldLabel } from "../src/fields.js";
 
 let picked = undefined;
 let stroke = null;
 let lasting = false;
 let dialog = null;
+let objectLevel = 1;
 
 const pointOf = (event) => event.getLocalPosition?.(canvas.stage) ?? canvas.mousePosition;
 
@@ -24,7 +26,7 @@ function onDown(event) {
     event.stopPropagation?.();
     const { x, y } = pointOf(event);
     const key = squareAt(canvas.scene, x, y);
-    if (picked?.object) return placeObject(canvas.scene, picked.object, x, y);
+    if (picked?.object) return placeObject(canvas.scene, picked.object, x, y, objectLevel);
     stroke = { keys: new Set([key]), clearing: Boolean(picked) && !picked.field && surfacesOf(canvas.scene).some((surface) => surface.material === picked && surface.squares.includes(key)), last: { x, y } };
 }
 function onMove(event) {
@@ -59,28 +61,36 @@ export function pick(choice) {
     listen(choice !== undefined);
 }
 
+// A choice's words, for hovering over it. Foundry reads a tooltip as HTML.
+const tooltipText = ({ title, lines = [], traits = [], reactions = [] }) => [`<strong>${escapeHTML(title)}</strong>`, ...lines.map(escapeHTML), ...(traits.length ? [`Traits: ${escapeHTML(traits.join(", "))}`] : []), ...(reactions.length ? [escapeHTML(reactions.join(" \u00b7 "))] : [])].join("<br>");
+const tooltip = (info) => `data-tooltip="${escapeHTML(tooltipText(info))}"`;
+const objectTip = (object) => tooltip(objectInfo(object, objectLevel));
+const fieldTip = (element) => tooltip({ title: fieldLabel(element), lines: [fieldEffect(element).description] });
+const stormStrike = () => hazardFormula().replace(/^(\d+)d/, (_, count) => `${Number(count) * 2}d`);
+
 const swatch = (color) => `<span class="pf2e-elements-swatch" style="background:${color}"></span>`;
 
 function windowHTML() {
     const scene = canvas.scene;
-    const surfaces = Object.entries(SURFACES).map(([key, surface]) => `<button type="button" data-pick="surface" data-value="${key}">${swatch(surface.color)}${surface.label}</button>`).join("");
-    const objects = Object.values(OBJECTS).map((object) => `<button type="button" data-pick="object" data-value="${object.key}">${swatch(object.tint)}${object.label}</button>`).join("");
-    const fields = FIELD_ELEMENTS.map((element) => `<button type="button" data-pick="field" data-value="${element}">${fieldLabel(element)}</button>`).join("");
+    const surfaces = Object.entries(SURFACES).map(([key, surface]) => `<button type="button" data-pick="surface" data-value="${key}" ${tooltip(surfaceInfo(key))}>${swatch(surface.color)}${surface.label}</button>`).join("");
+    const objects = Object.values(OBJECTS).map((object) => `<button type="button" data-pick="object" data-value="${object.key}" ${objectTip(object)}>${swatch(object.tint)}${object.label}</button>`).join("");
+    const fields = FIELD_ELEMENTS.map((element) => `<button type="button" data-pick="field" data-value="${element}" ${fieldTip(element)}>${fieldLabel(element)}</button>`).join("");
     const storms = Object.entries(STORMS).map(([key, storm]) => `<option value="${key}" ${stormOf(scene)?.key === key ? "selected" : ""}>${storm.label}</option>`).join("");
     const whole = FIELD_ELEMENTS.map((element) => `<option value="${element}" ${sceneFieldOf(scene)?.element === element ? "selected" : ""}>${fieldLabel(element)}</option>`).join("");
     const cycle = cycleOf(scene);
     return `<div class="pf2e-elements-paint">
         <nav class="pf2e-elements-tabs"><button type="button" data-tab="surfaces" class="active">Surfaces</button><button type="button" data-tab="objects">Objects</button><button type="button" data-tab="weather">Weather</button><button type="button" data-tab="fields">Fields</button><button type="button" data-tab="items">Items</button></nav>
-        <section data-section="surfaces"><div class="pf2e-elements-grid">${surfaces}<button type="button" data-pick="surface" data-value="">Erase</button></div><label><input type="checkbox" data-lasting ${lasting ? "checked" : ""}> Stays until something changes it</label><p>Click or drag on the scene. Painting a square with the same material clears it.</p></section>
-        <section data-section="objects" hidden><div class="pf2e-elements-grid">${objects}</div><p>Click on the scene to place one. Each bursts when destroyed or when the right element reaches it.</p></section>
-        <section data-section="weather" hidden><label>Elemental weather <select data-storm><option value="">None</option>${storms}</select></label><label>Strikes each round <input type="number" min="1" max="20" data-count value="${stormOf(scene)?.count ?? 2}"></label><p>Each new round, marked squares under the sky are hit, and new ones are marked for the next.</p></section>
-        <section data-section="fields" hidden><label>Whole scene <select data-scene-field><option value="">None</option>${whole}</select></label><div class="pf2e-elements-grid">${fields}<button type="button" data-pick="field" data-value="">Erase field</button></div><p>Or pick one and paint a marked area, which takes over from the whole-scene field inside it. A square holds one field. Inside, that element hits harder and hurts less, and what beats it hurts more.</p><label>Cycle through (elements, commas) <input type="text" data-cycle value="${cycle?.elements?.join(", ") ?? ""}"></label><label>Every (rounds) <input type="number" min="1" data-every value="${cycle?.every ?? 2}"></label></section>
+        <section data-section="surfaces"><div class="pf2e-elements-grid">${surfaces}<button type="button" data-pick="surface" data-value="" ${tooltip({ title: "Erase", lines: ["Clears the surface from the squares you click or drag over."] })}>Erase</button></div><label><input type="checkbox" data-lasting ${lasting ? "checked" : ""}> Stays until something changes it</label><p>Click or drag on the scene. Painting a square with the same material clears it.</p></section>
+        <section data-section="objects" hidden><label ${tooltip({ title: "Level", lines: ["Sets a placed object's burst damage and save DC. It starts at your party's level."] })}>Level <input type="number" min="1" max="20" data-object-level value="${objectLevel}"></label><div class="pf2e-elements-grid">${objects}</div><p>Click on the scene to place one. Each bursts when destroyed or when the right element reaches it.</p></section>
+        <section data-section="weather" hidden><label ${tooltip({ title: "Elemental weather", lines: Object.values(STORMS).map((storm) => `${storm.label}: ${storm.type}${storm.surface ? `, leaves ${SURFACES[storm.surface].label.toLowerCase()}` : ""}.`) })}>Elemental weather <select data-storm><option value="">None</option>${storms}</select></label><p class="pf2e-elements-note" data-storm-info></p><label>Strikes each round <input type="number" min="1" max="20" data-count value="${stormOf(scene)?.count ?? 2}"></label><p>Each new round, marked squares under the sky are hit, and new ones are marked for the next.</p></section>
+        <section data-section="fields" hidden><label ${tooltip({ title: "Whole scene", lines: ["Puts a field over the entire scene. A marked field takes over inside its own squares."] })}>Whole scene <select data-scene-field><option value="">None</option>${whole}</select></label><p class="pf2e-elements-note" data-field-info></p><div class="pf2e-elements-grid">${fields}<button type="button" data-pick="field" data-value="" ${tooltip({ title: "Erase field", lines: ["Clears a marked field from the squares you click or drag over."] })}>Erase field</button></div><p>Or pick one and paint a marked area, which takes over from the whole-scene field inside it. A square holds one field. Inside, that element hits harder and hurts less, and what beats it hurts more.</p><label>Cycle through (elements, commas) <input type="text" data-cycle value="${cycle?.elements?.join(", ") ?? ""}"></label><label>Every (rounds) <input type="number" min="1" data-every value="${cycle?.every ?? 2}"></label></section>
         <section data-section="items" hidden><p>Makes flasks for each surface, Sowing Seeds and a Harvest Charm in a world folder, to hand out or put on your own characters.</p><button type="button" data-items>Make the items</button></section>
     </div>`;
 }
 
 export function openPaint() {
     if (dialog) return dialog.close();
+    objectLevel = partyLevel(canvas.scene);
     dialog = new foundry.applications.api.DialogV2({
         window: { title: "Elements", icon: "fa-solid fa-droplet" },
         position: { width: 420 },
@@ -106,6 +116,24 @@ export function openPaint() {
             const { pick: kind, value } = button.dataset;
             pick(kind === "object" ? { object: value } : kind === "field" ? { field: value || null } : value || null);
         }));
+        // (A dropdown's options can't be hovered: what's chosen is spelled out under it.)
+        const stormWords = () => {
+            const storm = STORMS[root.querySelector("[data-storm]").value];
+            root.querySelector("[data-storm-info]").textContent = storm ? stormInfo(storm, stormStrike()).lines[0] : "";
+        };
+        const fieldWords = () => {
+            const element = root.querySelector("[data-scene-field]").value;
+            root.querySelector("[data-field-info]").textContent = element ? fieldEffect(element).description : "";
+        };
+        stormWords();
+        fieldWords();
+        root.querySelector("[data-object-level]").addEventListener("change", (event) => {
+            objectLevel = Math.max(1, Math.min(20, Math.round(Number(event.target.value)) || 1));
+            event.target.value = objectLevel;
+            root.querySelectorAll('[data-pick="object"]').forEach((button) => button.setAttribute("data-tooltip", tooltipText(objectInfo(OBJECTS[button.dataset.value], objectLevel))));
+        });
+        root.querySelector("[data-storm]").addEventListener("change", stormWords);
+        root.querySelector("[data-scene-field]").addEventListener("change", fieldWords);
         const stormChange = () => {
             const key = root.querySelector("[data-storm]").value;
             setStorm(scene, key ? { key, count: Number(root.querySelector("[data-count]").value) || 1 } : null);
