@@ -9,6 +9,7 @@ import { migrateSurfaces, onSurfaceDeleted, regionEvent } from "./terrain.js";
 import { onTokenMoved, onTurnChange } from "./carry.js";
 import { ENVIRONMENT_ID, syncRain } from "./environment.js";
 import { installHover } from "./hover.js";
+import { bindAim } from "./aim.js";
 
 const safely = (handler) => (...args) => Promise.resolve().then(() => handler(...args)).catch((error) => console.error(`${MODULE_ID} |`, error));
 
@@ -49,6 +50,7 @@ Hooks.on("createToken", safely(async (token) => {
 Hooks.on("renderChatMessageHTML", (message, html) => {
     bindCard(message, html);
     bindThaw(message, html);
+    bindAim(message, html);
 });
 // Limned means it can't be concealed: the condition goes as it arrives, or as Limned does.
 Hooks.on("createItem", safely(async (item) => {

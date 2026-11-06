@@ -27,6 +27,8 @@ When an element touches a surface or a creature, a card proposes what happens. E
 | Fire | A wet creature | It dries off |
 | Cold | A wet creature | Reflex, or −10 feet of Speed for a round (immobilized on a critical failure) |
 
+To hit the ground with something single-target, like a Strike or a one-target spell, use **Aim at the ground** on its damage roll or its card, then click a square. Whatever's there reacts to its element and damage, even with nobody standing on it. Range isn't checked, and neither is the attack roll: that's the GM's call. Escape cancels.
+
 Fliers don't touch the ground's surfaces. Reach, lightning's share, burst damage and the DC on surfaces are world settings.
 
 Air also blows out fire and dries mud. From the element chart: earth turns water to mud, smothers fire and crushes ice to rubble; plants drink up water and mud; water grows plants into a thicket; cold and poison kill plants back; metal and sonic shatter ice; acid eats metal; light and darkness cancel each other; light and vitality clear deathly ground; void and darkness wither living ground. Air and poison destroy brambles, air and wood remove broken glass, and void stills an acid pool. A world setting lets the chart decide pairs with no reaction of their own.

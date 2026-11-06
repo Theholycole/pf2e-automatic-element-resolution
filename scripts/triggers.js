@@ -101,6 +101,28 @@ export async function onRegionCreated(region) {
     }
 }
 
+// The elements a message's roll or ability carries, for aiming it at the ground. A damage roll's, or an ability's with no damage of its own to roll.
+export function messageElements(message) {
+    if (message.flags?.[MODULE_ID]) return [];
+    if (message.isDamageRoll) return elementsFrom({ damage: message.rolls.flatMap(damageOf), traits: message.flags?.pf2e?.context?.traits ?? [] });
+    if (message.rolls.length) return [];
+    const item = message.flags?.pf2e?.origin?.uuid ? fromUuidSync(message.flags.pf2e.origin.uuid) : null;
+    if (!item || Object.keys(item.system?.damage ?? {}).length) return [];
+    return elementsFrom({ traits: item.system?.traits?.value ?? [] });
+}
+
+export const canvasSquare = (clientX, clientY) => {
+    const point = canvas.canvasCoordinatesFromClient({ x: clientX, y: clientY });
+    return squareAt(canvas.scene, point.x, point.y);
+};
+
+// A message's element, aimed at a square: what's there reacts. Whether anything did.
+export async function reactAtSquare(message, scene, key) {
+    const plans = surfacePlans({ source: sourceOf(message.actor), elements: messageElements(message), contact: [key], surfaces: surfacesOf(scene), creatures: creaturesOf(scene), dc: dcFrom(message.actor, message.item) ?? sceneDC(scene), hazardFormula: hazardFormula(), settings: ruleSettings() });
+    await postOnce(plans, scene, `${message.id}:aim:${key}`);
+    return plans.length > 0;
+}
+
 // An item's use: Sow where it stands, or Harvest what's near. Items carry what they do in their flags (scripts/items.js).
 export async function onItemUsed(message) {
     const uuid = message.flags?.pf2e?.origin?.uuid;
