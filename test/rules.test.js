@@ -500,3 +500,14 @@ test("hover info: a surface's rules, its traits and what elements do to it", () 
     assert.deepEqual(surfaceInfo("water", { fixed: true }).reactions, ["Electricity: conducts"]);
     assert.ok(surfaceInfo("water").reactions.includes("Cold: ice"));
 });
+
+test("a single-target attack changes only the square it touches; lightning and lit oil still spread", () => {
+    const line = (material) => [{ id: "s", material, squares: ["0,0", "1,0", "2,0"] }];
+    const aimed = (element, material, creatures = []) => surfacePlans({ elements: [{ element, amount: 10 }], contact: ["1,0"], surfaces: line(material), creatures, dc: 20, hazardFormula: "2d6", aimed: true });
+    assert.deepEqual(aimed("fire", "plants")[0].squares, ["1,0"]);
+    assert.deepEqual(aimed("cold", "water")[0].squares, ["1,0"]);
+    assert.equal(aimed("fire", "oil")[0].squares.length, 3, "lit oil goes up all at once");
+    const other = { id: "o", squares: ["2,0"], elevation: 0 };
+    assert.deepEqual(aimed("electricity", "water", [other])[0].targets, ["o"], "lightning runs through it");
+    assert.equal(surfacePlans({ elements: [{ element: "fire", amount: 10 }], contact: ["1,0"], surfaces: line("plants"), dc: 20 })[0].squares.length, 3, "an area's effect still takes all of it");
+});

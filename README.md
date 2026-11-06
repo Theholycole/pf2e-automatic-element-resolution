@@ -27,7 +27,9 @@ When an element touches a surface or a creature, a card proposes what happens. E
 | Fire | A wet creature | It dries off |
 | Cold | A wet creature | Reflex, or −10 feet of Speed for a round (immobilized on a critical failure) |
 
-To hit the ground with something single-target, like a Strike or a one-target spell, use **Aim at the ground** on its damage roll or its card, then click a square. Whatever's there reacts to its element and damage, even with nobody standing on it. Range isn't checked, and neither is the attack roll: that's the GM's call. Escape cancels.
+To hit the ground with something single-target, like a Strike or a one-target spell, use **Aim at the ground** on its damage roll or its card, then click a square. Only that square reacts to its element, even with nobody standing on it. Range isn't checked, and neither is the attack roll: that's the GM's call. Escape cancels.
+
+A single-target attack or ability only changes the squares it touches, whether it's aimed at the ground or hits a creature standing there. An area's effect changes all of what it touches. Two things still spread from one square: lightning through water or metal, and lit oil, which goes up all at once.
 
 Fliers don't touch the ground's surfaces. Reach, lightning's share, burst damage and the DC on surfaces are world settings.
 

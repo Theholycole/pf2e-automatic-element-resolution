@@ -126,9 +126,9 @@ const titled = (template, words) => template.replace(/\{(\w+)\}/g, (_, key) => w
 
 // What each surface reaction does to a body, for the element on these squares: plans for the card.
 // event: { elements, contact: [square keys], surfaces: [{ id, material, squares }], creatures: [{ id, squares, elevation, metalArmor }],
-// direct: [creature ids already hit by the effect], dc, hazardFormula, settings }
+// direct: [creature ids already hit by the effect], dc, hazardFormula, settings, aimed: it comes from a single-target attack or ability }
 export function surfacePlans(event) {
-    const { elements = [], contact = [], surfaces = [], creatures = [], direct = [], dc = null, hazardFormula = null, settings = {}, local = false, source = null } = event;
+    const { elements = [], contact = [], surfaces = [], creatures = [], direct = [], dc = null, hazardFormula = null, settings = {}, local = false, aimed = false, source = null } = event;
     const { conductFraction, conductReach } = { ...DEFAULTS, ...settings };
     const plans = [];
     for (const { element, amount } of elements) {
@@ -140,10 +140,10 @@ export function surfacePlans(event) {
                 const reach = reaction.conduct ? conductReach : Infinity;
                 const body = bodyFrom(contact, squares, reach);
                 if (!body.size) continue;
-                // (The whole of it for what changes it: a flame lights all of a slick. Conduction only reaches so far. Local: only the squares
-                // touched, for a creature walking by, though lit oil still goes up all at once.)
+                // (The whole of it for what changes it: a flame lights all of a slick. Conduction only reaches so far. Local or aimed: only the squares
+                // touched, for a creature walking by or a single-target attack, though lit oil still goes up all at once.)
                 const reached = [...body.keys()];
-                const onlyTouched = reaction.onlyTouched || (local && !reaction.hazard && !reaction.conduct);
+                const onlyTouched = reaction.onlyTouched || ((local || aimed) && !reaction.hazard && !reaction.conduct);
                 const keys = onlyTouched ? reached.filter((key) => contact.includes(key)) : reached;
                 if (!keys.length) continue;
                 const whole = keys;

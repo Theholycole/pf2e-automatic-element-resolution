@@ -31,7 +31,8 @@ const directOf = (key, tokenId) => {
 
 async function postOnce(plans, scene, key) {
     for (const plan of plans) {
-        const once = `${key}:${plan.key}:${plan.material ?? plan.targets?.[0] ?? ""}`;
+        // (Two targets of one attack can each change their own square. Lightning through one body is one card, wherever it came in.)
+        const once = `${key}:${plan.key}:${plan.material ?? plan.targets?.[0] ?? ""}:${plan.conducted ? "" : (plan.squares ?? []).join("|")}`;
         if (!cardFor(once)) await postPlan(plan, scene, { from: key, once });
     }
 }
@@ -50,7 +51,7 @@ async function react({ scene, token, elements, actor, item, key, creatureOnly = 
     const direct = directOf(key, token.id);
     const creature = creatureOf(token);
     const dc = dcFrom(actor, item) ?? sceneDC(scene);
-    if (!creatureOnly) await postOnce(surfacePlans({ source: sourceOf(actor), elements, contact: (creature.elevation ?? 0) > 0 ? [] : creature.squares, surfaces: surfacesOf(scene), creatures: creaturesOf(scene), direct, dc, hazardFormula: hazardFormula(), settings: ruleSettings() }), scene, key);
+    if (!creatureOnly) await postOnce(surfacePlans({ source: sourceOf(actor), elements, contact: (creature.elevation ?? 0) > 0 ? [] : creature.squares, surfaces: surfacesOf(scene), creatures: creaturesOf(scene), direct, dc, hazardFormula: hazardFormula(), settings: ruleSettings(), aimed: !item?.system?.area }), scene, key);
     await postOnce(creaturePlans({ elements, creature, dc }), scene, `${key}:${token.id}`);
     // (It may already be on a card from an earlier target of the same roll.)
     for (const message of recentCards()) if (cardOf(message).from === key && cardOf(message).conducted) await dropTarget(message, token.id);
@@ -118,7 +119,7 @@ export const canvasSquare = (clientX, clientY) => {
 
 // A message's element, aimed at a square: what's there reacts. Whether anything did.
 export async function reactAtSquare(message, scene, key) {
-    const plans = surfacePlans({ source: sourceOf(message.actor), elements: messageElements(message), contact: [key], surfaces: surfacesOf(scene), creatures: creaturesOf(scene), dc: dcFrom(message.actor, message.item) ?? sceneDC(scene), hazardFormula: hazardFormula(), settings: ruleSettings() });
+    const plans = surfacePlans({ source: sourceOf(message.actor), elements: messageElements(message), contact: [key], surfaces: surfacesOf(scene), creatures: creaturesOf(scene), dc: dcFrom(message.actor, message.item) ?? sceneDC(scene), hazardFormula: hazardFormula(), settings: ruleSettings(), aimed: true });
     await postOnce(plans, scene, `${message.id}:aim:${key}`);
     return plans.length > 0;
 }
