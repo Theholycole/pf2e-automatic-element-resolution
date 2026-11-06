@@ -26,10 +26,10 @@ export function elementsFrom({ damage = [], traits = [] } = {}) {
 // damage, from GM Core's environmental table. check: on a save, what each degree adds.
 export const SURFACE_REACTIONS = [
     // (Nothing official for water. Shocking Grasp and Thunderstrike are hard on metal armor.)
-    { key: "conduct", element: "electricity", surfaces: ["water", "metal"], title: "Lightning through the {surface}", conduct: true },
+    { key: "conduct", element: "electricity", surfaces: ["water", "metal", "sewage"], title: "Lightning through the {surface}", conduct: true },
     // (Oil, 1 pint: 1d6 fire on a splash. The Oil Explosion hazard: basic Reflex for everyone there.)
     { key: "ignite-oil", element: "fire", surfaces: ["oil"], title: "The oil catches fire", to: "burning", hazard: true, persistentOnFailure: "1d6" },
-    { key: "ignite-plants", element: "fire", surfaces: ["plants", "thicket", "grass", "bramble", "flowers"], title: "Fire catches in the {surface}", to: "burning" },
+    { key: "ignite-plants", element: "fire", surfaces: ["plants", "thicket", "grass", "bramble", "flowers", "woodfloor", "straw"], title: "Fire catches in the {surface}", to: "burning" },
     // (Mist, for the cloud's concealment.)
     { key: "boil", element: "fire", surfaces: ["water"], title: "The water boils into steam", to: "steam" },
     { key: "melt", element: "fire", surfaces: ["ice"], title: "The ice melts", to: "water" },
@@ -93,6 +93,18 @@ export const SURFACE_REACTIONS = [
     { key: "clear-death", element: "vitality", surfaces: ["miasma"], title: "Life drives out the death cloud", to: null },
     { key: "burn-death", element: "light", surfaces: ["miasma"], title: "The light burns away the death cloud", to: null },
     { key: "clear-poison", element: "vitality", surfaces: ["toxic"], title: "Life clears the poison cloud", to: null },
+    // Man-made ground.
+    { key: "scatter-straw", element: "air", surfaces: ["straw"], title: "The wind scatters the straw", to: null },
+    { key: "crack-stone", element: "earth", surfaces: ["stone"], title: "The floor breaks up into rubble", to: "rubble" },
+    { key: "crack-stone-sound", element: "sonic", surfaces: ["stone"], title: "The floor breaks up into rubble", to: "rubble" },
+    { key: "eat-stone", element: "acid", surfaces: ["stone"], title: "The acid eats the floor into rubble", to: "rubble" },
+    { key: "boil-sewage", element: "fire", surfaces: ["sewage"], title: "The sewage boils into a poison cloud", to: "toxic" },
+    { key: "freeze-sewage", element: "cold", surfaces: ["sewage"], title: "The sewage freezes", to: "ice" },
+    { key: "drink-sewage", element: "wood", surfaces: ["sewage"], title: "Plants drink up the sewage", to: "plants" },
+    { key: "clean-sewage", element: "vitality", surfaces: ["sewage"], title: "Life cleanses the sewage", to: "water" },
+    { key: "quench-coals", element: "water", surfaces: ["coals"], title: "The coals go out", to: "rubble" },
+    { key: "chill-coals", element: "cold", surfaces: ["coals"], title: "The coals go out", to: "rubble" },
+    { key: "fan-coals", element: "air", surfaces: ["coals"], title: "The wind fans the coals into flame", to: "burning" },
     // Sow and harvest: a wood effect makes standing plants burst around those in them. It's never a creature walking past.
     { key: "harvest", element: "wood", surfaces: ["plants", "thicket", "bramble", "flowers"], title: "Harvest: thorns burst from the {surface}", to: null, hazard: true, damageType: "piercing", persistentOnFailure: null, onlyTouched: true, notTrail: true }
 ];

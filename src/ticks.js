@@ -57,7 +57,7 @@ export function tickSurfaces(surfaces, { lives = DEFAULT_LIVES, spreadDC = SPREA
     for (const { material, squares } of surfaces.filter((surface) => SURFACES[surface.material]?.flammable)) {
         const caught = squares.filter((key) => !wet(key)).filter((key) => {
             const beside = neighbours(key).filter((other) => burning.includes(other));
-            return beside.some(() => d20() >= spreadDC);
+            return beside.some(() => d20() >= (SURFACES[material].catches ?? spreadDC));
         });
         if (caught.length) changes.push({ material, to: "burning", keys: caught, words: `Fire spreads to ${SURFACES[material].label.toLowerCase()} (${countOf(caught)}).` });
     }

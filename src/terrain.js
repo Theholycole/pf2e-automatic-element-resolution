@@ -62,6 +62,11 @@ export function terrainRules(material, { dc = null } = {}) {
         case "toxic": return { ...bare, hazard: { formula: HAZARD_DAMAGE.plain, type: "poison", words: "chokes on the poison cloud" }, summary: ["Poison damage on entering and at each turn's start. Fire explodes it."] };
         case "miasma": return { ...bare, hazard: { formula: HAZARD_DAMAGE.plain, type: "void", words: "withers in the death cloud" }, summary: ["Void damage on entering and at each turn's start. Life and healing clear it."] };
         case "frostfog": return { ...bare, hazard: { formula: HAZARD_DAMAGE.plain, type: "cold", words: "freezes in the fog" }, effect: { name: "Surface: Frost fog", rules: [{ key: "GrantItem", uuid: CONCEALED, allowDuplicate: true, onDeleteActions: { granter: "cascade", grantee: "cascade" } }] }, summary: ["Concealed inside it, and cold damage on entering and at each turn's start."] };
+        case "woodfloor": return { ...bare, summary: ["Plain to walk on. It catches fire, and fire spreads across it."] };
+        case "straw": return { ...bare, summary: ["Plain to walk on. It catches fire easily, and fire races across it."] };
+        case "stone": return { ...bare, summary: ["Plain to walk on, and it doesn't burn."] };
+        case "sewage": return { ...fromFeature(material, "bog-shallow", dc), hazard: { formula: HAZARD_DAMAGE.plain, type: "poison", words: "chokes in the sewage" }, summary: ["Difficult terrain. It conducts lightning."] };
+        case "coals": return { ...bare, hazard: { formula: HAZARD_DAMAGE.plain, type: "fire", words: "burns on the coals" }, summary: ["It doesn't burn out on its own."] };
         case "dust": return { ...bare, effect: { name: "Surface: Dust cloud", rules: [{ key: "GrantItem", uuid: CONCEALED, allowDuplicate: true, onDeleteActions: { granter: "cascade", grantee: "cascade" } }] }, summary: ["Concealed inside it."] };
         case "light": return { ...bare, effect: { name: "Surface: Light", rules: [{ key: "Note", selector: "ac", title: "Limned", text: "Limned in light: it can't be concealed here." }] }, summary: ["Limned inside it: it can't be concealed."] };
         default: return bare;

@@ -537,3 +537,24 @@ test("weather counts as its element on what's under it, except what's fixed", ()
     assert.deepEqual(cold.filter((each) => each.material === "water").map((each) => each.to), ["ice"], "water freezes once");
     assert.deepEqual(tickSurfaces([material("plants", ["0,0"])], { lives: {} }).changes, [], "no weather");
 });
+
+test("man-made ground: what each does and what elements do to it", () => {
+    const on = (element, material) => surfacePlans({ elements: [{ element, amount: 5 }], contact: ["0,0"], surfaces: [{ id: "s", material, squares: ["0,0"] }], creatures: [], dc: 20 })[0];
+    assert.equal(on("fire", "woodfloor").to, "burning");
+    assert.equal(on("fire", "straw").to, "burning");
+    assert.equal(on("air", "straw").to, null);
+    assert.equal(on("fire", "stone"), undefined, "stone doesn't burn");
+    assert.equal(on("sonic", "stone").to, "rubble");
+    assert.equal(on("fire", "sewage").to, "toxic");
+    assert.equal(on("water", "coals").to, "rubble");
+    assert.equal(on("air", "coals").to, "burning");
+    assert.deepEqual(hazardPlan(terrainRules("sewage"), { id: "t", name: "Goblin" }, 2).damage, [{ formula: "2d2", type: "poison" }]);
+    assert.equal(terrainRules("sewage").feature, "bog-shallow");
+    assert.deepEqual(terrainRules("woodfloor").hazard, null);
+    assert.deepEqual(surfaceInfo("stone").traits, ["earth"]);
+    const fire = { material: "burning", squares: ["0,0"], ages: {} };
+    const spread = (material, roll) => tickSurfaces([fire, { material, squares: ["1,0"], ages: {} }], { lives: {}, spreadDC: 11, d20: () => roll }).changes.some((change) => change.to === "burning");
+    assert.equal(spread("straw", 6), true, "straw catches easily");
+    assert.equal(spread("woodfloor", 6), false);
+    assert.equal(spread("woodfloor", 11), true);
+});
