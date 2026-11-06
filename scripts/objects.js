@@ -19,7 +19,7 @@ async function objectActor(key) {
         name: object.label, type: "hazard", img: object.img, folder: folder.id,
         system: {
             attributes: { ac: { value: 10 }, hardness: object.hardness, hp: { value: object.hp, max: object.hp }, immunities: [{ type: "object-immunities" }], emitsSound: false },
-            details: { level: { value: 0 }, description: `<p>Bursts when destroyed, or when ${object.triggers.join(" or ")} reaches it. Homebrew.</p>` },
+            details: { level: { value: 0 }, description: `<p>Hardness ${object.hardness}. Any ${object.triggers.join(" or ")} damage bursts it, however little; anything else has to destroy it. Homebrew.</p>` },
             traits: { value: [], rarity: "common", size: { value: "med" } }
         },
         prototypeToken: { name: object.label, actorLink: false, width: 1, height: 1, texture: { src: object.img, tint: object.tint }, disposition: CONST.TOKEN_DISPOSITIONS.NEUTRAL },

@@ -103,7 +103,7 @@ An area effect's card offers to leave its element's surface: Sow for wood and pl
 
 ## Objects
 
-**Objects** has a barrel and something natural for each of 15 elements, like an oil barrel and a pitch pine, or a poison barrel and a choke fungus. Each is a PF2e hazard with Hardness and Hit Points. It bursts when destroyed or when the right element reaches it: basic Reflex for those nearby, and it leaves its surface. A burst can set off the next object.
+**Objects** has a barrel and something natural for each of 15 elements, like an oil barrel and a pitch pine, or a poison barrel and a choke fungus. Each is a PF2e hazard with real Hardness and Hit Points (Hardness 5 and 20 HP, or Hardness 10 and 40 HP for stone), so ordinary hits rarely break one. The right element bursts it every time, even for 1 damage: basic Reflex for those nearby, and it leaves its surface. A burst can set off the next object.
 
 ## Elemental weather
 

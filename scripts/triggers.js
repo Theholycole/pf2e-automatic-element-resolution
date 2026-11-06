@@ -14,7 +14,7 @@ import { stormRound, stormFireLasts } from "./storms.js";
 import { onOilPainted } from "./terrain.js";
 import { paintSquares } from "./foundry.js";
 import { burstSquares } from "../src/surfaces.js";
-import { setOff } from "../src/objects.js";
+import { goesOff, setOff } from "../src/objects.js";
 import { creaturePlans, elementsFrom, leavePlan, surfacePlans } from "../src/reactions.js";
 import { rainPuddles, roundPlan, tickSurfaces } from "../src/ticks.js";
 
@@ -184,7 +184,7 @@ export function onApplyDamage(actor, params) {
     const object = objectOfActor(actor);
     if (object) {
         return () => {
-            if (setOff(object, elements) || (actor.hitPoints?.value ?? 1) <= 0) burstObject(token, object, { dc: dcFrom(item?.actor ?? message?.actor, item) }).catch((error) => console.error(`${MODULE_ID} |`, error));
+            if (goesOff(object, elements, actor.hitPoints?.value ?? 1)) burstObject(token, object, { dc: dcFrom(item?.actor ?? message?.actor, item) }).catch((error) => console.error(`${MODULE_ID} |`, error));
         };
     }
     if (!elements.length) return;

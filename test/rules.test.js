@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { bodyFrom, openSquares, squareKey, touches } from "../src/surfaces.js";
-import { OBJECTS, burstPlan, objectsOf, setOff } from "../src/objects.js";
+import { OBJECTS, burstPlan, goesOff, objectsOf, setOff } from "../src/objects.js";
 import { STORMS, pickWarnings, strikePlan } from "../src/storms.js";
 import { fieldEffect, nextField } from "../src/fields.js";
 import { creaturePlans, elementsFrom, leavePlan, levelDC, shareOf, surfacePlans } from "../src/reactions.js";
@@ -405,6 +405,15 @@ test("objects: a barrel and a natural one for each element, set off by what they
     assert.deepEqual(plan.targets, ["near"]);
     assert.equal(plan.to, "burning");
     assert.equal(plan.burst.tokenId, "b");
+});
+
+test("objects: tough against the wrong element, and the right one always sets them off", () => {
+    const barrel = OBJECTS["fire-barrel"];
+    assert.equal(barrel.hardness, 5);
+    assert.equal(OBJECTS["earth-natural"].hardness, 10);
+    assert.equal(goesOff(barrel, [{ element: "fire", amount: 1 }], 20), true, "1 fire damage, Hardness took it all");
+    assert.equal(goesOff(barrel, [], 15), false, "a sword that hasn't broken it");
+    assert.equal(goesOff(barrel, [], 0), true, "a sword that has");
 });
 
 test("storms: warnings come from the sky's squares, and a strike hits around its mark", () => {
