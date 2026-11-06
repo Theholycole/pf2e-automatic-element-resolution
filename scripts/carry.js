@@ -2,10 +2,13 @@
 // move puts back the squares it changed and takes back its cards that haven't been applied. What the GM already applied stays. The record of
 // moves lives only until the page reloads.
 
-import { MODULE_ID, creatureOf, creaturesOf, dcFrom, hazardFormula, isActiveGM, isCreatureActor, paintSquares, sceneDC, surfacesOf } from "./foundry.js";
+import { MODULE_ID, creatureOf, creaturesOf, dcFrom, hazardFormula, isActiveGM, isCreatureActor, paintSquares, sceneDC, surfaceDC, surfacesOf } from "./foundry.js";
 import { cardOf, postPlan, stackState } from "./cards.js";
 import { squareKey } from "../src/surfaces.js";
-import { carriedElements, needsCard, pathSquares, trailPlans, weaknessPlan } from "../src/carry.js";
+import { bestStatistic, ignoredOf, immuneTo } from "./terrain.js";
+import { balancePlan, hazardPlan, steady, terrainRules } from "../src/terrain.js";
+import { SURFACES } from "../src/surfaces.js";
+import { carriedElements, enteredSquares, needsCard, pathSquares, trailPlans, weaknessPlan } from "../src/carry.js";
 
 const elementsOf = (actor) => carriedElements({
     traits: [...(actor?.traits ?? actor?.system?.traits?.value ?? [])],
@@ -13,6 +16,8 @@ const elementsOf = (actor) => carriedElements({
 });
 
 // What each token's recent moves did: { time, before: [{ material, keys }] }, newest last.
+// (Foundry splits a move at each region's edge. Where the whole move began and which squares it's paid for, by its subpath.)
+const subpaths = new Map();
 const moves = new Map();
 const MOVES_KEPT = 20;
 
@@ -42,17 +47,18 @@ async function undoMove(token) {
     if (unapplied.length) await ChatMessage.deleteDocuments(unapplied);
 }
 
-async function touchGround(token, contact, entry = null) {
+async function touchGround(token, contact, entry = null, options = {}) {
     const scene = token.parent;
     if (!contact.length) return;
     const surfaces = surfacesOf(scene);
     if (!surfaces.length) return;
+    const entering = options.entering ?? contact;
     // (Oil clings: a stack for each move through it, or turn begun in it.)
-    if (surfaces.some((surface) => surface.material === "oil" && surface.squares.some((key) => contact.includes(key)))) {
+    if (surfaces.some((surface) => surface.material === "oil" && surface.squares.some((key) => entering.includes(key)))) {
         await stackState(token.actor, "oil", 1);
         if (entry) entry.oil = 1;
     }
-    const weakness = weaknessPlan({ creature: creatureOf(token), weaknesses: token.actor.attributes?.weaknesses ?? [], contact, surfaces });
+    const weakness = weaknessPlan({ creature: creatureOf(token), weaknesses: token.actor.attributes?.weaknesses ?? [], contact: entering, surfaces, perSquare: Boolean(entry) });
     if (weakness) await postPlan(weakness, scene, entry ? { fromMove: token.id } : {});
     const elements = elementsOf(token.actor);
     if (!elements.length) return;
@@ -64,6 +70,27 @@ async function touchGround(token, contact, entry = null) {
             entry?.before.push({ material: plan.material, keys: plan.squares });
             await paintSquares(scene, plan.squares, plan.to);
         }
+    }
+}
+
+// Moving onto ground that hurts or trips: each square entered hurts, never the one left; one Balance a move. inAir counts for clouds; onGround for the rest.
+async function enterGround(token, movement, inAir, onGround) {
+    const scene = token.parent;
+    const subpath = movement.subpathId ?? movement.chain?.[0] ?? movement.id;
+    if (!subpaths.has(subpath)) subpaths.set(subpath, { origin: movement.origin, balanced: new Set(), paid: new Set() });
+    if (subpaths.size > 100) subpaths.delete(subpaths.keys().next().value);
+    const seen = subpaths.get(subpath);
+    const forced = (movement.passed?.waypoints ?? []).every((point) => point.action === "displace");
+    for (const surface of surfacesOf(scene).filter((each) => !each.environment)) {
+        const entered = (SURFACES[surface.material]?.cloud ? inAir : onGround).filter((key) => surface.squares.includes(key) && !seen.paid.has(`${surface.material}:${key}`));
+        if (!entered.length) continue;
+        entered.forEach((key) => seen.paid.add(`${surface.material}:${key}`));
+        const rules = terrainRules(surface.material, { dc: surfaceDC(token.actor), hazardFormula: hazardFormula() });
+        if (rules.balance && !forced && !seen.balanced.has(surface.material) && !steady(rules, ignoredOf(token.actor))) {
+            seen.balanced.add(surface.material);
+            await postPlan(balancePlan(rules, token, bestStatistic(token.actor, rules.balance.statistics), seen.origin), scene, { fromMove: token.id });
+        }
+        if (rules.hazard && !immuneTo(token.actor, rules.hazard.type)) await postPlan(hazardPlan(rules, token, entered.length), scene, { fromMove: token.id });
     }
 }
 
@@ -91,8 +118,14 @@ export async function onTokenMoved(token, movement) {
     if (movement?.method === "undo") return undoMove(token);
     const entry = recordMove(token);
     await slideOnIce(token, movement, entry);
-    const points = [movement?.origin, ...(movement?.passed?.waypoints ?? [])].filter(Boolean);
-    if (points.length) await touchGround(token, pathSquares(points.map((point) => ({ width: token.width, height: token.height, ...point })), token.parent.grid.size), entry);
+    const points = [movement?.origin, ...(movement?.passed?.waypoints ?? [])].filter(Boolean).map((point) => ({ width: token.width, height: token.height, ...point }));
+    if (!points.length) return;
+    const size = token.parent.grid.size;
+    const path = pathSquares(points, size);
+    const start = pathSquares(points.slice(0, 1), size, { aloft: true });
+    const entering = enteredSquares(path, start);
+    await enterGround(token, movement, enteredSquares(pathSquares(points, size, { aloft: true }), start), entering);
+    await touchGround(token, path, entry, { entering });
 }
 
 // A turn starting: the squares it's standing on.

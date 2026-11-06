@@ -40,7 +40,7 @@ async function onUp() {
     if (!stroke) return;
     const { keys, clearing } = stroke;
     stroke = null;
-    if (picked?.field) return paintField(canvas.scene, [...keys], picked.field);
+    if (picked && typeof picked === "object" && "field" in picked) return paintField(canvas.scene, [...keys], picked.field);
     await paintSquares(canvas.scene, [...keys], clearing ? null : picked, { lasting });
     if (picked === "oil" && !clearing) await onOilPainted(canvas.scene, [...keys]);
 }
@@ -74,7 +74,7 @@ function windowHTML() {
         <section data-section="surfaces"><div class="pf2e-elements-grid">${surfaces}<button type="button" data-pick="surface" data-value="">Erase</button></div><label><input type="checkbox" data-lasting ${lasting ? "checked" : ""}> Stays until something changes it</label><p>Click or drag on the scene. Painting a square with the same material clears it.</p></section>
         <section data-section="objects" hidden><div class="pf2e-elements-grid">${objects}</div><p>Click on the scene to place one. Each bursts when destroyed or when the right element reaches it.</p></section>
         <section data-section="weather" hidden><label>Elemental weather <select data-storm><option value="">None</option>${storms}</select></label><label>Strikes each round <input type="number" min="1" max="20" data-count value="${stormOf(scene)?.count ?? 2}"></label><p>Each new round, marked squares under the sky are hit, and new ones are marked for the next.</p></section>
-        <section data-section="fields" hidden><label>Whole scene <select data-scene-field><option value="">None</option>${whole}</select></label><div class="pf2e-elements-grid">${fields}</div><p>Or pick one and paint a marked area. Inside, that element hits harder and hurts less.</p><label>Cycle through (elements, commas) <input type="text" data-cycle value="${cycle?.elements?.join(", ") ?? ""}"></label><label>Every (rounds) <input type="number" min="1" data-every value="${cycle?.every ?? 2}"></label></section>
+        <section data-section="fields" hidden><label>Whole scene <select data-scene-field><option value="">None</option>${whole}</select></label><div class="pf2e-elements-grid">${fields}<button type="button" data-pick="field" data-value="">Erase field</button></div><p>Or pick one and paint a marked area, which takes over from the whole-scene field inside it. A square holds one field. Inside, that element hits harder and hurts less, and what beats it hurts more.</p><label>Cycle through (elements, commas) <input type="text" data-cycle value="${cycle?.elements?.join(", ") ?? ""}"></label><label>Every (rounds) <input type="number" min="1" data-every value="${cycle?.every ?? 2}"></label></section>
         <section data-section="items" hidden><p>Makes flasks for each surface, Sowing Seeds and a Harvest Charm in a world folder, to hand out or put on your own characters.</p><button type="button" data-items>Make the items</button></section>
     </div>`;
 }
@@ -104,7 +104,7 @@ export function openPaint() {
         root.querySelectorAll("[data-pick]").forEach((button) => button.addEventListener("click", () => {
             root.querySelectorAll("[data-pick]").forEach((other) => other.classList.toggle("active", other === button));
             const { pick: kind, value } = button.dataset;
-            pick(kind === "object" ? { object: value } : kind === "field" ? { field: value } : value || null);
+            pick(kind === "object" ? { object: value } : kind === "field" ? { field: value || null } : value || null);
         }));
         const stormChange = () => {
             const key = root.querySelector("[data-storm]").value;

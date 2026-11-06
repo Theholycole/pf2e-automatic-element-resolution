@@ -83,9 +83,10 @@ export const greasePlan = (rules, token, statistic) => ({
 });
 
 // The card for being in it.
-export const hazardPlan = (rules, token) => ({
-    key: `hazard-${rules.material}`, element: rules.hazard.type, title: `${token.name} ${rules.hazard.words}`, targets: [token.id], check: null,
-    damage: rules.hazard.formula ? [{ formula: rules.hazard.formula, type: rules.hazard.type }] : [],
+// squares: how many it entered on this move, each one a hit of the damage.
+export const hazardPlan = (rules, token, squares = 1) => ({
+    key: `hazard-${rules.material}`, element: rules.hazard.type, title: `${token.name} ${rules.hazard.words}${squares > 1 ? ` (${squares} squares)` : ""}`, targets: [token.id], check: null,
+    damage: rules.hazard.formula ? [{ formula: rules.hazard.formula.replace(/^(\d+)d/, (_, count) => `${Number(count) * squares}d`), type: rules.hazard.type }] : [],
     degrees: rules.hazard.persistent ? { automatic: { persistent: rules.hazard.persistent } } : {}, notes: []
 });
 

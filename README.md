@@ -37,7 +37,7 @@ Air also blows out fire and dries mud. From the element chart: earth turns water
 | Plants | GM Core's light undergrowth: difficult terrain, and a creature can Take Cover |
 | Oil | Grease: Balance to move onto it, with Reflex or Acrobatics, unless it Steps or Crawls |
 | Steam | Mist: concealed inside it |
-| Burning ground | Fire damage on entering and at each turn's start, and 1d6 persistent fire (a card each time) |
+| Burning ground | Fire damage for each square entered and at each turn's start, and 1d6 persistent fire (a card each time) |
 | Thicket | GM Core's heavy undergrowth: greater difficult terrain and cover |
 | Mud | GM Core's shallow bog: difficult terrain |
 | Rubble | GM Core's rubble: difficult terrain |
@@ -111,7 +111,7 @@ An area effect's card offers to leave its element's surface: Sow for wood and pl
 
 ## Elemental fields
 
-**Fields** covers the whole scene or a marked area you paint. Inside, an element's effects deal half your level (at least 1) more as a status bonus, and you get that much resistance to it and that much weakness to whatever beats it on the element chart: a fire field means water and earth hurt more. A **neutral field** removes all weaknesses and resistances inside it. Fields can cycle through elements every few rounds, so holding the right ground is worth fighting for.
+**Fields** covers the whole scene or a marked area you paint. A square holds one field, and a marked one takes over from the scene's inside it. Inside, an element's effects deal half your level (at least 1) more as a status bonus, and you get that much resistance to it and that much weakness to whatever beats it on the element chart: a fire field means water and earth hurt more. A **neutral field** removes all weaknesses and resistances inside it. Fields can cycle through elements every few rounds, so holding the right ground is worth fighting for.
 
 ## Weakness to the ground
 

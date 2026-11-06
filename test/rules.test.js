@@ -6,7 +6,7 @@ import { OBJECTS, burstPlan, goesOff, objectsOf, setOff } from "../src/objects.j
 import { STORMS, pickWarnings, strikePlan } from "../src/storms.js";
 import { fieldEffect, nextField } from "../src/fields.js";
 import { creaturePlans, elementsFrom, leavePlan, levelDC, shareOf, surfacePlans } from "../src/reactions.js";
-import { carriedElements, needsCard, pathSquares, trailPlans, weaknessPlan } from "../src/carry.js";
+import { carriedElements, enteredSquares, needsCard, pathSquares, trailPlans, weaknessPlan } from "../src/carry.js";
 import { environmentMaterial } from "../src/surfaces.js";
 import { rainPuddles, roundPlan, tickSurfaces } from "../src/ticks.js";
 import { balancePlan, effectRulesFor, greasePlan, hazardPlan, steady, terrainRules } from "../src/terrain.js";
@@ -436,6 +436,18 @@ test("fields: a boost and resistance by level, and a cycle", () => {
     assert.deepEqual(fieldEffect("neutral").rules.map((rule) => rule.key), ["Note"]);
     assert.equal(nextField(["fire", "cold"], "fire"), "cold");
     assert.equal(nextField(["fire", "cold"], "cold"), "fire");
+});
+
+test("a move: only the squares entered count, each one a hit", () => {
+    const path = pathSquares([{ x: 0, y: 0 }, { x: 300, y: 0 }], 100);
+    assert.deepEqual(enteredSquares(path, ["0,0"]), ["1,0", "2,0", "3,0"]);
+    const plan = hazardPlan(terrainRules("burning", { hazardFormula: "2d6" }), { id: "t", name: "Goblin" }, 3);
+    assert.deepEqual(plan.damage, [{ formula: "6d6", type: "fire" }]);
+    assert.match(plan.title, /3 squares/);
+    assert.equal(plan.degrees.automatic.persistent, "1d6", "persistent fire doesn't multiply");
+    const weak = weaknessPlan({ creature: { id: "c", name: "G" }, weaknesses: [{ type: "water", value: 5 }], contact: ["0,0", "1,0"], surfaces: [{ material: "water", squares: ["0,0", "1,0"] }], perSquare: true });
+    assert.deepEqual(weak.damage, [{ amount: 10, type: "untyped" }]);
+    assert.deepEqual(pathSquares([{ x: 0, y: 0, elevation: 10 }, { x: 100, y: 0, elevation: 10 }], 100, { aloft: true }), ["0,0", "1,0"]);
 });
 
 test("every script loads", async () => {

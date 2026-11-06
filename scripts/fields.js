@@ -38,39 +38,61 @@ export function installNeutralFields() {
     }
 }
 
-// Lay a field on these squares, or take them out of it if they're already in.
+// Lay a field on these squares, or take them out if they're already in it. A square holds one field, so it leaves any other. No element: erase.
 export async function paintField(scene, keys, element) {
     const size = scene.grid.size;
     const shape = (key) => {
         const [column, row] = squareOf(key);
         return { type: "rectangle", x: column * size, y: row * size, width: size, height: size };
     };
-    const region = fieldRegions(scene).find((each) => fieldOf(each) === element);
-    if (!region) {
-        const [created] = await scene.createEmbeddedDocuments("Region", [{ name: fieldLabel(element), color: COLOR, shapes: keys.map(shape), visibility: CONST.REGION_VISIBILITY.ALWAYS, flags: { [MODULE_ID]: { field: element } } }]);
-        return applyFieldRegion(created);
+    for (const other of fieldRegions(scene).filter((each) => fieldOf(each) !== element)) {
+        const left = squaresOfField(other).filter((key) => !keys.includes(key));
+        if (left.length === squaresOfField(other).length) continue;
+        if (left.length) {
+            await other.update({ shapes: left.map(shape) });
+            await syncInside(other);
+        } else await other.delete();
     }
-    const had = squaresOfField(region);
-    const clearing = keys.every((key) => had.includes(key));
-    const next = clearing ? had.filter((key) => !keys.includes(key)) : [...new Set([...had, ...keys])];
-    if (!next.length) return region.delete();
-    await region.update({ shapes: next.map(shape) });
-    return syncInside(region);
+    if (element) {
+        const region = fieldRegions(scene).find((each) => fieldOf(each) === element);
+        if (!region) {
+            const [created] = await scene.createEmbeddedDocuments("Region", [{ name: fieldLabel(element), color: COLOR, shapes: keys.map(shape), visibility: CONST.REGION_VISIBILITY.ALWAYS, flags: { [MODULE_ID]: { field: element } } }]);
+            await applyFieldRegion(created);
+        } else {
+            const had = squaresOfField(region);
+            const next = keys.every((key) => had.includes(key)) ? had.filter((key) => !keys.includes(key)) : [...new Set([...had, ...keys])];
+            if (next.length) {
+                await region.update({ shapes: next.map(shape) });
+                await syncInside(region);
+            } else await region.delete();
+        }
+    }
+    return syncSceneField(scene);
 }
 
 const heldField = (actor) => (actor?.itemTypes?.effect ?? []).filter((effect) => effect.flags?.[MODULE_ID]?.[SCENE_FIELD]);
 
-// The scene-wide field's Effect on every creature, or none.
+// The scene-wide field's Effect on every creature, or none. One pass at a time: a paint and a region's events can ask together.
+const syncing = new Map();
 export async function syncSceneField(scene) {
     if (!isActiveGM() || !scene) return;
+    const queued = (syncing.get(scene.id) ?? Promise.resolve()).then(() => syncFields(scene));
+    syncing.set(scene.id, queued.catch(() => null));
+    return queued;
+}
+
+async function syncFields(scene) {
     const element = sceneFieldOf(scene)?.element ?? null;
+    const marked = fieldRegions(scene).flatMap(squaresOfField);
     for (const token of scene.tokens) {
         const actor = token.actor;
         if (!isCreatureActor(actor)) continue;
         const held = heldField(actor);
-        if (held.some((effect) => effect.flags[MODULE_ID][SCENE_FIELD] === element)) continue;
+        // (A marked field takes over from the scene's inside it: one field at a time.)
+        const wanted = marked.some((key) => creatureOf(token).squares.includes(key)) ? null : element;
+        if (held.some((effect) => effect.flags[MODULE_ID][SCENE_FIELD] === wanted)) continue;
         if (held.length) await actor.deleteEmbeddedDocuments("Item", held.map((effect) => effect.id));
-        if (!element) continue;
+        if (!wanted) continue;
         const { name, rules, description } = fieldEffect(element);
         await actor.createEmbeddedDocuments("Item", [{ name, type: "effect", img: "icons/svg/aura.svg", system: { slug: `elements-field-${element}`, duration: { value: -1, unit: "unlimited", expiry: null, sustained: false }, rules, description: { value: `<p>${description}</p>` } }, flags: { [MODULE_ID]: { [SCENE_FIELD]: element } } }]);
     }

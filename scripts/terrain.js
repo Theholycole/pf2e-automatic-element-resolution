@@ -3,13 +3,13 @@
 
 import { MODULE_ID, creatureOf, isActiveGM, ruleSquaresOf, surfaceMaterial, surfaceDC, hazardFormula } from "./foundry.js";
 import { postPlan, stackState } from "./cards.js";
+import { syncSceneField } from "./fields.js";
 import { fieldEffect } from "../src/fields.js";
 import { balancePlan, effectRulesFor, greasePlan, hazardPlan, steady, terrainRules } from "../src/terrain.js";
 import { SURFACES, touches } from "../src/surfaces.js";
 
 const SCRIPT = `if (game.users.activeGM?.id !== game.user.id) return;\nawait CONFIG.pf2eElementResolution?.regionEvent?.(region, behavior, event);`;
-const EVENTS = ["tokenEnter", "tokenExit", "tokenMoveIn", "tokenMoveWithin", "tokenTurnStart"];
-const handledMoves = new Set();
+const EVENTS = ["tokenEnter", "tokenExit", "tokenTurnStart"];
 const adding = new Set();
 
 const rulesOf = (region, actor = null) => (fieldOf(region) ? fieldRules(fieldOf(region)) : terrainRules(surfaceMaterial(region), { dc: surfaceDC(actor), hazardFormula: hazardFormula() }));
@@ -18,16 +18,28 @@ const fieldRules = (element) => {
     const { name, rules, description } = fieldEffect(element);
     return { material: `field-${element}`, label: name, feature: null, costs: {}, environment: [], effect: { name, rules }, balance: null, hazard: null, summary: [description] };
 };
-const ignoredOf = (actor) => {
+export const ignoredOf = (actor) => {
     const terrain = actor?.system?.movement?.terrain;
     return { difficult: [...(terrain?.difficult?.ignored ?? [])], greater: [...(terrain?.greater?.ignored ?? [])] };
 };
 const insideEffects = (actor, region) => (actor?.itemTypes?.effect ?? []).filter((effect) => effect.flags?.[MODULE_ID]?.region === region.uuid);
 const isCreature = (actor) => Boolean(actor?.isOfType?.("creature"));
 // (PF2e's isAffectedBy answers for void and vitality on the undead, and doesn't look at immunities.)
-const immuneTo = (actor, type) => actor?.isAffectedBy?.(type) === false || (actor?.attributes?.immunities ?? []).some((immunity) => immunity.type === type);
+export const immuneTo = (actor, type) => actor?.isAffectedBy?.(type) === false || (actor?.attributes?.immunities ?? []).some((immunity) => immunity.type === type);
 const isCloud = (region) => Boolean(SURFACES[surfaceMaterial(region)]?.cloud);
 export { fieldOf };
+
+// Surfaces painted before 0.2.1: characters' "travel" pays what "walk" does.
+export async function migrateSurfaces() {
+    if (!isActiveGM()) return;
+    for (const scene of game.scenes) for (const region of scene.regions) {
+        if (!surfaceMaterial(region)) continue;
+        for (const behavior of region.behaviors) {
+            const costs = behavior.type === "modifyMovementCost" ? behavior.system.difficulties : null;
+            if (costs && costs.walk > 1 && costs.travel !== costs.walk) await behavior.update({ "system.difficulties.travel": costs.walk });
+        }
+    }
+}
 
 // A marked field's script for its events.
 export async function applyFieldRegion(region) {
@@ -39,8 +51,10 @@ export async function applyFieldRegion(region) {
 export async function applyTerrain(region) {
     const rules = rulesOf(region);
     const flags = { [MODULE_ID]: { terrain: true } };
+    // (PF2e's characters move by "travel" where NPCs "walk": both pay.)
+    const costs = rules.costs.walk ? { ...rules.costs, travel: rules.costs.walk } : rules.costs;
     const behaviors = [
-        ...(Object.keys(rules.costs).length ? [{ type: "modifyMovementCost", name: `${rules.label}: movement`, system: { difficulties: rules.costs }, flags }] : []),
+        ...(Object.keys(costs).length ? [{ type: "modifyMovementCost", name: `${rules.label}: movement`, system: { difficulties: costs }, flags }] : []),
         ...(rules.environment.length ? [{ type: "environment", name: `${rules.label}: environment`, system: { environmentTypes: rules.environment, mode: "add" }, flags }] : []),
         ...(rules.effect || rules.balance || rules.hazard ? [{ type: "executeScript", name: `${rules.label}: events`, system: { source: SCRIPT, events: EVENTS }, flags }] : [])
     ];
@@ -88,9 +102,10 @@ export async function syncInside(region) {
 export async function onSurfaceDeleted(region) {
     if (!isActiveGM() || !(surfaceMaterial(region) || fieldOf(region))) return;
     for (const token of region.parent.tokens) if (token.actor) await removeInside(token.actor, region);
+    if (fieldOf(region)) await syncSceneField(region.parent);
 }
 
-const bestStatistic = (actor, statistics) => statistics.reduce((best, slug) => ((actor.getStatistic?.(slug)?.mod ?? -Infinity) > (actor.getStatistic?.(best)?.mod ?? -Infinity) ? slug : best), statistics[0]);
+export const bestStatistic = (actor, statistics) => statistics.reduce((best, slug) => ((actor.getStatistic?.(slug)?.mod ?? -Infinity) > (actor.getStatistic?.(best)?.mod ?? -Infinity) ? slug : best), statistics[0]);
 
 // Oil just painted: those standing there pick up a stack and save, as Grease.
 export async function onOilPainted(scene, keys) {
@@ -102,7 +117,7 @@ export async function onOilPainted(scene, keys) {
     }
 }
 
-// A surface's event (its script behavior).
+// A surface's event (its script behavior). What a move does is in scripts/carry.js, which sees the whole path.
 export async function regionEvent(region, behavior, event) {
     if (!isActiveGM() || !(surfaceMaterial(region) || fieldOf(region))) return;
     const token = event?.data?.token;
@@ -112,25 +127,12 @@ export async function regionEvent(region, behavior, event) {
     switch (event.name) {
         case "tokenEnter":
             if (!aloft) await addInside(token, region);
+            if (fieldOf(region)) await syncSceneField(region.parent);
             return;
         case "tokenExit":
             await removeInside(token.actor, region);
+            if (fieldOf(region)) await syncSceneField(region.parent);
             return;
-        case "tokenMoveIn":
-        case "tokenMoveWithin": {
-            const movement = event.data.movement;
-            // (Ctrl-Z taking the move back isn't a move: scripts/carry.js undoes what the move did.)
-            if (aloft || movement?.method === "undo") return;
-            // (Foundry splits a move at the region's edge, in and then within: one move, one card.)
-            const key = `${region.id}:${token.id}:${movement?.subpathId ?? movement?.chain?.[0] ?? movement?.id ?? Date.now()}`;
-            if (handledMoves.has(key)) return;
-            handledMoves.add(key);
-            setTimeout(() => handledMoves.delete(key), 60000);
-            const forced = (movement?.passed?.waypoints ?? []).every((point) => point.action === "displace");
-            if (rules.balance && !forced && !steady(rules, ignoredOf(token.actor))) await postPlan(balancePlan(rules, token, bestStatistic(token.actor, rules.balance.statistics), movement?.origin ?? null), region.parent, { fromMove: token.id });
-            if (rules.hazard && !immuneTo(token.actor, rules.hazard.type)) await postPlan(hazardPlan(rules, token), region.parent, { fromMove: token.id });
-            return;
-        }
         case "tokenTurnStart":
             if (rules.hazard && rules.hazard.when !== "enter" && !aloft && !immuneTo(token.actor, rules.hazard.type)) await postPlan(hazardPlan(rules, token), region.parent);
             return;

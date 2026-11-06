@@ -5,7 +5,7 @@ import { applyCard, bindCard, onRollMessage, postPlan } from "./cards.js";
 import { onApplyDamage, onCombatUpdate, onDamageMessage, onItemUsed, onRegionCreated } from "./triggers.js";
 import { openPaint } from "./paint.js";
 import { installNeutralFields, syncSceneField } from "./fields.js";
-import { onSurfaceDeleted, regionEvent } from "./terrain.js";
+import { migrateSurfaces, onSurfaceDeleted, regionEvent } from "./terrain.js";
 import { onTokenMoved, onTurnChange } from "./carry.js";
 import { ENVIRONMENT_ID, syncRain } from "./environment.js";
 
@@ -22,6 +22,7 @@ Hooks.once("ready", () => {
     const module = game.modules.get(MODULE_ID);
     if (module) module.api = Object.freeze({ paintSquares, surfacesOf, postPlan, applyCard, openPaint });
     game.modules.get("pf2e-resolution-core")?.api?.patches?.damage?.onApply?.({ module: MODULE_ID, before: onApplyDamage });
+    migrateSurfaces().catch((error) => console.error(`${MODULE_ID} |`, error));
 });
 
 Hooks.on("createChatMessage", safely(async (message) => {
