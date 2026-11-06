@@ -88,6 +88,7 @@ test("the ground's changes: boil, melt, douse, freeze, smother, disperse", () =>
     assert.equal(freeze.to, "ice");
     assert.deepEqual(freeze.targets, ["in"]);
     assert.equal(freeze.degrees.failure.condition, "immobilized");
+    assert.equal(freeze.degrees.criticalFailure.condition, "immobilized");
     assert.equal(on("electricity", "ice"), undefined, "ice doesn't conduct");
 });
 
