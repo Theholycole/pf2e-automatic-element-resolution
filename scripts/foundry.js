@@ -163,7 +163,7 @@ export function dcFrom(actor, item) {
 // The damage a roll holds: [{ type, total, persistent }].
 export const damageOf = (roll) => (roll?.instances ?? []).map((instance) => ({ type: instance.type, total: instance.total, persistent: Boolean(instance.persistent) }));
 
-const effect = (name, slug, img, duration, rules, description, badge = null) => ({ name, type: "effect", img, flags: { [MODULE_ID]: { state: slug } }, system: { slug, duration, rules, ...(badge ? { badge } : {}), description: { value: `<p>${description}</p>` } } });
+const effect = (name, slug, img, duration, rules, description, badge = null, traits = []) => ({ name, type: "effect", img, flags: { [MODULE_ID]: { state: slug } }, system: { slug, duration, rules, traits: { value: traits }, ...(badge ? { badge } : {}), description: { value: `<p>${description}</p>` } } });
 const UNLIMITED = { value: -1, unit: "unlimited", expiry: null, sustained: false };
 
 // (Personal Rain Cloud gives fire resistance 2 at rank 1. Oil's stacks, frozen's value, shocked and limned are homebrew, the last three after Battlezoo Eldamon's conditions.)
@@ -171,21 +171,21 @@ export const STATE_EFFECTS = {
     wet: effect("Wet", WET_SLUG, "icons/magic/water/water-drop-swirl-blue.webp", { value: 1, unit: "minutes", expiry: "turn-start", sustained: false }, [
         { key: "Resistance", type: "fire", value: 2 },
         { key: "FlatModifier", selector: "saving-throw", type: "circumstance", value: -1, label: "Wet", predicate: ["item:trait:electricity"] }
-    ], "Soaked through: fire resistance 2, and &minus;1 circumstance to saves against electricity. Lightning through water hits it for double. Cold can freeze it. Homebrew."),
+    ], "Soaked through: fire resistance 2, and &minus;1 circumstance to saves against electricity. Lightning through water hits it for double. Cold can freeze it. Homebrew.", null, ["water"]),
     oil: effect("Oil", OIL_SLUG, "icons/consumables/potions/potion-tube-corked-orange.webp", UNLIMITED, [
         { key: "FlatModifier", selector: "all-speeds", type: "status", value: -5, label: "Oil" }
     ], "Covered in oil: &minus;5-foot status penalty to Speeds, however much of it there is. The next fire damage turns each stack into 1d6 persistent fire damage. Water washes it off. Homebrew.", { type: "counter", value: 1, min: 1, max: 20 }),
     frozen: effect("Frozen", FROZEN_SLUG, "icons/magic/water/snowflake-ice-blue.webp", UNLIMITED, [
         { key: "FlatModifier", selector: "all-speeds", type: "status", value: "-5*@item.badge.value", label: "Frozen" }
-    ], "Slowly freezing over: &minus;5-foot status penalty to Speeds for each point. It or an adjacent ally can spend an Interact action to lower this by 4. Fire thaws it at once. Homebrew.", { type: "counter", value: 1, min: 1, max: 10 }),
+    ], "Slowly freezing over: &minus;5-foot status penalty to Speeds for each point. It or an adjacent ally can spend an Interact action to lower this by 4. Fire thaws it at once. Homebrew.", { type: "counter", value: 1, min: 1, max: 10 }, ["cold"]),
     icebound: effect("Stuck in the ice", ICEBOUND_SLUG, "icons/magic/water/ice-crystal-white.webp", UNLIMITED, [
         { key: "GrantItem", uuid: "Compendium.pf2e.conditionitems.Item.eIcWbB5o3pP6OIMe", allowDuplicate: true, onDeleteActions: { granter: "cascade", grantee: "cascade" } }
     ], "Frozen in place: immobilized until it Escapes, or the ice under it breaks or melts. Homebrew."),
     shocked: effect("Shocked", SHOCKED_SLUG, "icons/magic/lightning/bolt-strike-blue.webp", { value: 2, unit: "rounds", expiry: "turn-end", sustained: false }, [
         { key: "FlatModifier", selector: "ac", type: "circumstance", value: -2, label: "Shocked", predicate: ["origin:item:trait:electricity"] },
         { key: "FlatModifier", selector: "saving-throw", type: "circumstance", value: -2, label: "Shocked", predicate: ["item:trait:electricity"] }
-    ], "Charged with electricity: &minus;2 circumstance to AC and saves against electricity. Homebrew."),
+    ], "Charged with electricity: &minus;2 circumstance to AC and saves against electricity. Homebrew.", null, ["electricity"]),
     limned: effect("Limned", LIMNED_SLUG, "icons/magic/light/explosion-star-glow-yellow.webp", { value: 2, unit: "rounds", expiry: "turn-end", sustained: false }, [
         { key: "Note", selector: "ac", title: "Limned", text: "Outlined in light: it can't be concealed." }
-    ], "Outlined in light: it can't be concealed. Homebrew.")
+    ], "Outlined in light: it can't be concealed. Homebrew.", null, ["light"])
 };

@@ -78,7 +78,7 @@ Water effects' cards offer **Leave a puddle**.
 
 ## Creatures change the ground
 
-A creature carries an element if it has that trait, or persistent damage of that type. Each square it moves through or starts its turn on reacts: a fire creature or a burning one lights plants and oil, boils water and melts ice, while bare ground doesn't change. Fliers leave the ground alone. It happens on its own unless someone else has to roll, and a world setting makes it ask first.
+A creature carries an element if it has that trait, an effect with that trait, or persistent damage of that type. Wet counts as water, Frozen as cold, Shocked as electricity and Limned as light, so a Wet creature thickens plants and puts out fires as it walks. Each square it moves through or starts its turn on reacts: a fire creature or a burning one lights plants and oil, boils water and melts ice, while bare ground doesn't change. Fliers leave the ground alone. It happens on its own unless someone else has to roll, and a world setting makes it ask first.
 
 ## With the environment module
 
