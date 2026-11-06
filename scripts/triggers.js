@@ -88,11 +88,10 @@ export async function onRegionCreated(region) {
         await onOilPainted(scene, contact);
     }
     const all = elementsFrom({ traits: origin.traits ?? [] });
-    const elements = all.filter(({ element }) => element !== "electricity");
     if (!all.length) return;
     const item = origin.uuid ? await fromUuid(origin.uuid).catch(() => null) : null;
     const dc = dcFrom(item?.actor, item) ?? sceneDC(scene);
-    await postOnce(surfacePlans({ source: sourceOf(item?.actor), elements, contact, surfaces: surfacesOf(scene), creatures: creaturesOf(scene), dc, hazardFormula: hazardFormula(), settings: ruleSettings() }), scene, region.id);
+    await postOnce(surfacePlans({ source: sourceOf(item?.actor), elements: all, contact, surfaces: surfacesOf(scene), creatures: creaturesOf(scene), dc, hazardFormula: hazardFormula(), settings: ruleSettings() }), scene, region.id);
     for (const { token, object } of objectsIn(scene, contact)) if (setOff(object, all)) await burstObject(token, object, { dc });
     if (game.settings.get(MODULE_ID, "offerSurfaces")) {
         for (const { element } of all) {

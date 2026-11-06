@@ -1,7 +1,7 @@
 // PF2e Automatic Element Resolution: a battlefield that reacts to elements. See docs/design.md.
 
-import { MODULE_ID, isActiveGM, paintSquares, registerSettings, surfacesOf } from "./foundry.js";
-import { applyCard, bindCard, onRollMessage, postPlan } from "./cards.js";
+import { MODULE_ID, isActiveGM, isLimnedItem, limnedOf, paintSquares, registerSettings, surfacesOf } from "./foundry.js";
+import { applyCard, bindCard, bindThaw, onRollMessage, postPlan } from "./cards.js";
 import { onApplyDamage, onCombatUpdate, onDamageMessage, onItemUsed, onRegionCreated } from "./triggers.js";
 import { openPaint } from "./paint.js";
 import { installNeutralFields, syncSceneField } from "./fields.js";
@@ -44,7 +44,17 @@ Hooks.on("createToken", safely(async (token) => {
         await syncSceneField(token.parent);
     }
 }));
-Hooks.on("renderChatMessageHTML", (message, html) => bindCard(message, html));
+Hooks.on("renderChatMessageHTML", (message, html) => {
+    bindCard(message, html);
+    bindThaw(message, html);
+});
+// Limned means it can't be concealed: the condition goes as it arrives, or as Limned does.
+Hooks.on("createItem", safely(async (item) => {
+    if (!isActiveGM() || !item.parent) return;
+    const limned = limnedOf(item.parent);
+    if (limned && item.slug === "concealed") await item.delete();
+    if (isLimnedItem(item)) await item.parent.itemTypes?.condition?.find((condition) => condition.slug === "concealed")?.delete();
+}));
 
 Hooks.on("getSceneControlButtons", (controls) => {
     if (!game.user.isGM) return;

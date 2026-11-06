@@ -128,7 +128,11 @@ export async function stackState(actor, key, by = 1) {
     const slug = STATE_EFFECTS[key].system.slug;
     const held = actor.itemTypes?.effect?.find((item) => item.slug === slug);
     const max = STATE_EFFECTS[key].system.badge?.max ?? 20;
-    if (held) return held.update({ "system.badge.value": Math.min(max, (held.system.badge?.value ?? 1) + by) });
+    if (held) {
+        const value = (held.system.badge?.value ?? 1) + by;
+        return value < 1 ? held.delete() : held.update({ "system.badge.value": Math.min(max, value) });
+    }
+    if (by < 1) return null;
     const data = foundry.utils.deepClone(STATE_EFFECTS[key]);
     data.system.badge.value = Math.min(max, by);
     return actor.createEmbeddedDocuments("Item", [data]);
@@ -160,6 +164,25 @@ export async function leaveSurface(message) {
     await writeState(message, { ...state, leave: [] });
 }
 
+// Frozen's way out: the creature or an adjacent ally spends an Interact, and its owner or the GM presses this.
+const THAW = 4;
+async function postThaw(token) {
+    await ChatMessage.create({ speaker: { alias: "Elements" }, content: `<div class="pf2e-elements-card"><p>${escapeHTML(token.name)} is Frozen. An Interact from it or an adjacent ally breaks off some of the ice.</p><button type="button" data-elements-thaw="${token.uuid}"><i class="fa-solid fa-icicles"></i> Interact: Frozen \u2212${THAW}</button></div>`, flags: { [MODULE_ID]: { thaw: token.uuid } } });
+}
+
+export function bindThaw(message, html) {
+    const uuid = message.flags?.[MODULE_ID]?.thaw;
+    if (!uuid) return;
+    const button = html.querySelector("[data-elements-thaw]");
+    if (!button) return;
+    const actor = fromUuidSync(uuid)?.actor;
+    if (!actor?.isOwner) return button.remove();
+    button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        await stackState(actor, "frozen", -THAW);
+    });
+}
+
 // Ice: the rest of a forced move, away from where it began.
 async function slide(token, push) {
     const forcedMove = coreForcedMove();
@@ -189,7 +212,10 @@ export async function applyCard(message) {
             const row = state.degrees?.[target.degree ?? "automatic"] ?? {};
             if (row.persistent && DamageRoll) await actor.applyDamage({ damage: await new DamageRoll(`(${row.persistent})[persistent,${state.element}]`).evaluate(), token, rollOptions: new Set([CONDUCTED]) });
             if (row.condition) await addCondition(actor, row.condition);
-            if (row.stack) await stackState(actor, row.stack.key, row.stack.by);
+            if (row.stack) {
+                await stackState(actor, row.stack.key, row.stack.by);
+                if (row.stack.key === "frozen") await postThaw(token);
+            }
             // (Back where the move began: its stored place, and no second card for moving.)
             if (row.returnTo) await token.update(row.returnTo, { teleport: true, animate: false, [MODULE_ID]: { forced: true } });
             for (const key of state.add ?? []) await setState(actor, key, true);

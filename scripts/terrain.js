@@ -11,6 +11,7 @@ import { SURFACES, touches } from "../src/surfaces.js";
 const SCRIPT = `if (game.users.activeGM?.id !== game.user.id) return;\nawait CONFIG.pf2eElementResolution?.regionEvent?.(region, behavior, event);`;
 const EVENTS = ["tokenEnter", "tokenExit", "tokenTurnStart"];
 const adding = new Set();
+const removing = new Set();
 
 const rulesOf = (region, actor = null) => (fieldOf(region) ? fieldRules(fieldOf(region)) : terrainRules(surfaceMaterial(region), { dc: surfaceDC(actor), hazardFormula: hazardFormula() }));
 const fieldOf = (region) => region?.flags?.[MODULE_ID]?.field ?? null;
@@ -82,9 +83,17 @@ async function addInside(token, region) {
     }
 }
 
+// (Painting, the region's exit event and its deletion can all ask at once: one removal.)
 async function removeInside(actor, region) {
+    const key = `${actor.uuid}:${region.uuid}`;
     const held = insideEffects(actor, region);
-    if (held.length) await actor.deleteEmbeddedDocuments("Item", held.map((item) => item.id));
+    if (!held.length || removing.has(key)) return;
+    removing.add(key);
+    try {
+        await actor.deleteEmbeddedDocuments("Item", held.map((item) => item.id).filter((id) => actor.items.has(id)));
+    } finally {
+        removing.delete(key);
+    }
 }
 
 // The Effect on exactly those inside it now: after painting, and when a reaction changes the ground.

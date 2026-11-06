@@ -118,6 +118,9 @@ export async function writeAges(scene, ages) {
 
 const METAL_GROUPS = new Set(["chain", "composite", "plate"]);
 
+export const isLimnedItem = (item) => [LIMNED_SLUG, "elements-surface-light"].includes(item?.slug);
+export const limnedOf = (actor) => (actor?.itemTypes?.effect ?? []).some(isLimnedItem);
+
 const stateOf = (actor, slug) => actor?.itemTypes?.effect?.find((effect) => effect.slug === slug) ?? null;
 
 // A token as the rules see it: { id, name, squares, elevation, metalArmor, wet }.
@@ -138,7 +141,7 @@ export function creatureOf(token) {
         elevation: stored.elevation ?? 0,
         metalArmor: METAL_GROUPS.has(actor?.wornArmor?.group),
         wet: Boolean(stateOf(actor, WET_SLUG)),
-        limned: Boolean(stateOf(actor, LIMNED_SLUG)),
+        limned: limnedOf(actor),
         oil: stateOf(actor, OIL_SLUG)?.system?.badge?.value ?? 0,
         frozen: stateOf(actor, FROZEN_SLUG)?.system?.badge?.value ?? 0
     };
