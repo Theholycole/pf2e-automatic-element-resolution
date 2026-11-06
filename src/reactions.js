@@ -26,10 +26,10 @@ export function elementsFrom({ damage = [], traits = [] } = {}) {
 // damage, from GM Core's environmental table. check: on a save, what each degree adds.
 export const SURFACE_REACTIONS = [
     // (Nothing official for water. Shocking Grasp and Thunderstrike are hard on metal armor.)
-    { key: "conduct", element: "electricity", surfaces: ["water", "metal", "sewage"], title: "Lightning through the {surface}", conduct: true },
+    { key: "conduct", element: "electricity", surfaces: ["water", "metal", "sewage", "metalfurniture"], title: "Lightning through the {surface}", conduct: true },
     // (Oil, 1 pint: 1d6 fire on a splash. The Oil Explosion hazard: basic Reflex for everyone there.)
     { key: "ignite-oil", element: "fire", surfaces: ["oil"], title: "The oil catches fire", to: "burning", hazard: true, persistentOnFailure: "1d6" },
-    { key: "ignite-plants", element: "fire", surfaces: ["plants", "thicket", "grass", "bramble", "flowers", "woodfloor", "straw"], title: "Fire catches in the {surface}", to: "burning" },
+    { key: "ignite-plants", element: "fire", surfaces: ["plants", "thicket", "grass", "bramble", "flowers", "woodfloor", "straw", "woodfurniture"], title: "Fire catches in the {surface}", to: "burning" },
     // (Mist, for the cloud's concealment.)
     { key: "boil", element: "fire", surfaces: ["water"], title: "The water boils into steam", to: "steam" },
     { key: "melt", element: "fire", surfaces: ["ice"], title: "The ice melts", to: "water" },
@@ -53,7 +53,7 @@ export const SURFACE_REACTIONS = [
     { key: "blight", element: "poison", surfaces: ["plants"], title: "Poison kills the plants", to: null },
     { key: "shatter", element: "metal", surfaces: ["ice"], title: "The ice shatters", to: null },
     { key: "shatter-sound", element: "sonic", surfaces: ["ice"], title: "The ice shatters", to: null },
-    { key: "corrode", element: "acid", surfaces: ["metal"], title: "The acid eats the metal away", to: null },
+    { key: "corrode", element: "acid", surfaces: ["metal", "metalfurniture"], title: "The acid eats the metal away", to: null },
     { key: "dispel-darkness", element: "light", surfaces: ["darkness"], title: "The light drives out the darkness", to: null },
     { key: "dispel-light", element: "darkness", surfaces: ["light"], title: "The darkness swallows the light", to: null },
     { key: "cleanse", element: "light", surfaces: ["death"], title: "The light cleanses the deathly ground", to: null },
@@ -95,9 +95,9 @@ export const SURFACE_REACTIONS = [
     { key: "clear-poison", element: "vitality", surfaces: ["toxic"], title: "Life clears the poison cloud", to: null },
     // Man-made ground.
     { key: "scatter-straw", element: "air", surfaces: ["straw"], title: "The wind scatters the straw", to: null },
-    { key: "crack-stone", element: "earth", surfaces: ["stone"], title: "The floor breaks up into rubble", to: "rubble" },
-    { key: "crack-stone-sound", element: "sonic", surfaces: ["stone"], title: "The floor breaks up into rubble", to: "rubble" },
-    { key: "eat-stone", element: "acid", surfaces: ["stone"], title: "The acid eats the floor into rubble", to: "rubble" },
+    { key: "crack-stone", element: "earth", surfaces: ["stone", "stonefurniture"], title: "The {surface} breaks up into rubble", to: "rubble" },
+    { key: "crack-stone-sound", element: "sonic", surfaces: ["stone", "stonefurniture"], title: "The {surface} breaks up into rubble", to: "rubble" },
+    { key: "eat-stone", element: "acid", surfaces: ["stone", "stonefurniture"], title: "The acid eats the {surface} into rubble", to: "rubble" },
     { key: "boil-sewage", element: "fire", surfaces: ["sewage"], title: "The sewage boils into a poison cloud", to: "toxic" },
     { key: "freeze-sewage", element: "cold", surfaces: ["sewage"], title: "The sewage freezes", to: "ice" },
     { key: "drink-sewage", element: "wood", surfaces: ["sewage"], title: "Plants drink up the sewage", to: "plants" },

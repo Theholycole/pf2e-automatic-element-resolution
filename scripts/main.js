@@ -20,6 +20,7 @@ Hooks.once("init", () => {
 });
 
 Hooks.once("setup", () => installNeutralFields());
+Hooks.on("pf2eElementsVisibility", safely(migrateSurfaces));
 
 Hooks.once("ready", () => {
     const module = game.modules.get(MODULE_ID);

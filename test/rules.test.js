@@ -558,3 +558,14 @@ test("man-made ground: what each does and what elements do to it", () => {
     assert.equal(spread("woodfloor", 6), false);
     assert.equal(spread("woodfloor", 11), true);
 });
+
+test("furniture: difficult terrain of its material", () => {
+    const on = (element, material) => surfacePlans({ elements: [{ element, amount: 5 }], contact: ["0,0"], surfaces: [{ id: "s", material, squares: ["0,0"] }], creatures: [{ id: "o", squares: ["0,0"], elevation: 0 }], dc: 20 })[0];
+    for (const material of ["woodfurniture", "stonefurniture", "metalfurniture"]) assert.deepEqual(terrainRules(material).costs, { walk: 2 });
+    assert.equal(on("fire", "woodfurniture").to, "burning");
+    assert.equal(on("fire", "stonefurniture"), undefined);
+    assert.equal(on("sonic", "stonefurniture").title, "The stone furniture breaks up into rubble");
+    assert.equal(on("electricity", "metalfurniture").conducted, true);
+    assert.equal(on("acid", "metalfurniture").to, null);
+    assert.deepEqual(surfaceInfo("woodfurniture").traits, ["wood"]);
+});

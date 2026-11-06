@@ -1,7 +1,7 @@
 // A surface's rules in play (src/terrain.js): its region's behaviors, the Effect a creature holds inside it, and its events. The script
 // behavior reaches this module through CONFIG, on the active GM's client.
 
-import { MODULE_ID, creatureOf, isActiveGM, ruleSquaresOf, surfaceMaterial, surfaceDC } from "./foundry.js";
+import { MODULE_ID, creatureOf, isActiveGM, ruleSquaresOf, surfaceMaterial, surfaceDC, surfaceVisibility } from "./foundry.js";
 import { postPlan, stackState } from "./cards.js";
 import { syncSceneField } from "./fields.js";
 import { fieldEffect } from "../src/fields.js";
@@ -30,11 +30,13 @@ export const immuneTo = (actor, type) => actor?.isAffectedBy?.(type) === false |
 const isCloud = (region) => Boolean(SURFACES[surfaceMaterial(region)]?.cloud);
 export { fieldOf };
 
-// Surfaces painted before 0.2.1: characters' "travel" pays what "walk" does.
+// Surfaces painted before 0.2.1: characters' "travel" pays what "walk" does. And who sees each surface, as the world's setting says.
 export async function migrateSurfaces() {
     if (!isActiveGM()) return;
     for (const scene of game.scenes) for (const region of scene.regions) {
         if (!surfaceMaterial(region)) continue;
+        const visibility = surfaceVisibility(surfaceMaterial(region));
+        if (region.visibility !== visibility) await region.update({ visibility });
         for (const behavior of region.behaviors) {
             const costs = behavior.type === "modifyMovementCost" ? behavior.system.difficulties : null;
             if (costs && costs.walk > 1 && costs.travel !== costs.walk) await behavior.update({ "system.difficulties.travel": costs.walk });

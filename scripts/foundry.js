@@ -28,6 +28,7 @@ export function registerSettings() {
     game.settings.register(MODULE_ID, "burningRounds", { name: "Rounds until a fire burns out", hint: "0: never.", scope: "world", config: true, type: Number, default: 3 });
     game.settings.register(MODULE_ID, "spreadDC", { name: "Flat check for fire to spread", hint: "Each round, for each burning square next to oil or plants.", scope: "world", config: true, type: Number, default: 11 });
     game.settings.register(MODULE_ID, "askTrails", { name: "Ask before a creature changes the ground", hint: "Off: grass catches under a fire creature on its own, with a card only when someone else has to roll. On: a card each time.", scope: "world", config: true, type: Boolean, default: false });
+    game.settings.register(MODULE_ID, "showManMade", { name: "Show man-made surfaces to players", hint: "Floors, furniture, sewage and forge coals. They're hidden by default, since the map's art shows them. They work the same either way.", scope: "world", config: true, type: Boolean, default: false, onChange: () => Hooks.callAll("pf2eElementsVisibility") });
     game.settings.register(MODULE_ID, "hoverInfo", { name: "Hover info", hint: "Hovering over a square says what surface or field is on it.", scope: "client", config: true, type: Boolean, default: true });
     game.settings.register(MODULE_ID, "matchups", { name: "Let the element chart decide unlisted pairs", hint: "When no reaction covers an element on a surface and the surface's element is weak to it, the touched squares give way.", scope: "world", config: true, type: Boolean, default: false });
     game.settings.register(MODULE_ID, "rainPuddles", { name: "Puddles from soaking rain", hint: "New puddles each round in heavy rain or worse, on bare squares. 0: none.", scope: "world", config: true, type: Number, default: 3 });
@@ -75,6 +76,9 @@ const shapeOf = (scene, key) => {
     return { type: "rectangle", x: column * size, y: row * size, width: size, height: size };
 };
 
+// Who sees a surface. Man-made ones show on the map's art, so they're the GM's unless the world says otherwise.
+export const surfaceVisibility = (material) => (SURFACES[material]?.manMade && !game.settings.get(MODULE_ID, "showManMade") ? CONST.REGION_VISIBILITY.GAMEMASTER : CONST.REGION_VISIBILITY.ALWAYS);
+
 // Set a material's squares (none: its region goes). Each square keeps its age and whether it lasts, while it's there.
 async function writeSquares(scene, material, squares, { ages = {}, lasting = [] } = {}) {
     const region = regionOf(scene, material);
@@ -86,7 +90,7 @@ async function writeSquares(scene, material, squares, { ages = {}, lasting = [] 
         await region.update({ shapes, [`flags.${MODULE_ID}.ages`]: timing.ages, [`flags.${MODULE_ID}.lasting`]: timing.lasting });
         return syncInside(region);
     }
-    const [created] = await scene.createEmbeddedDocuments("Region", [{ name: `Surface: ${SURFACES[material].label}`, color: SURFACES[material].color, shapes, visibility: CONST.REGION_VISIBILITY.ALWAYS, flags: { [MODULE_ID]: { [SURFACE]: material, ...timing } } }]);
+    const [created] = await scene.createEmbeddedDocuments("Region", [{ name: `Surface: ${SURFACES[material].label}`, color: SURFACES[material].color, shapes, visibility: surfaceVisibility(material), flags: { [MODULE_ID]: { [SURFACE]: material, ...timing } } }]);
     await applyTerrain(created);
     return created;
 }

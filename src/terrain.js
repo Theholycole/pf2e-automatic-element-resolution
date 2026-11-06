@@ -67,6 +67,9 @@ export function terrainRules(material, { dc = null } = {}) {
         case "stone": return { ...bare, summary: ["Plain to walk on, and it doesn't burn."] };
         case "sewage": return { ...fromFeature(material, "bog-shallow", dc), hazard: { formula: HAZARD_DAMAGE.plain, type: "poison", words: "chokes in the sewage" }, summary: ["Difficult terrain. It conducts lightning."] };
         case "coals": return { ...bare, hazard: { formula: HAZARD_DAMAGE.plain, type: "fire", words: "burns on the coals" }, summary: ["It doesn't burn out on its own."] };
+        case "woodfurniture": return { ...bare, costs: { walk: 2 }, summary: ["Difficult terrain. It catches fire, and fire spreads across it."] };
+        case "stonefurniture": return { ...bare, costs: { walk: 2 }, summary: ["Difficult terrain, and it doesn't burn."] };
+        case "metalfurniture": return { ...bare, costs: { walk: 2 }, summary: ["Difficult terrain. It conducts lightning."] };
         case "dust": return { ...bare, effect: { name: "Surface: Dust cloud", rules: [{ key: "GrantItem", uuid: CONCEALED, allowDuplicate: true, onDeleteActions: { granter: "cascade", grantee: "cascade" } }] }, summary: ["Concealed inside it."] };
         case "light": return { ...bare, effect: { name: "Surface: Light", rules: [{ key: "Note", selector: "ac", title: "Limned", text: "Limned in light: it can't be concealed here." }] }, summary: ["Limned inside it: it can't be concealed."] };
         default: return bare;

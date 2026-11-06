@@ -3,7 +3,7 @@
 
 export const SURFACES = {
     water: { label: "Water", color: "#3f7fd6", conducts: true },
-    metal: { label: "Metal floor", color: "#8a8f98", conducts: true },
+    metal: { label: "Metal floor", color: "#8a8f98", conducts: true, manMade: true },
     oil: { label: "Oil", color: "#4a3b22", flammable: true },
     plants: { label: "Plants", color: "#4f8a3a", flammable: true },
     thicket: { label: "Thicket", color: "#2f6b2a", flammable: true },
@@ -30,12 +30,15 @@ export const SURFACES = {
     miasma: { label: "Death cloud", color: "#5d5266", cloud: true, drifts: true },
     frostfog: { label: "Frost fog", color: "#c5e3f0", cloud: true, drifts: true },
     dust: { label: "Dust cloud", color: "#b5a58a", cloud: true, drifts: true },
-    // Man-made. catches: its own flat check for fire to spread to it.
-    woodfloor: { label: "Wood floor", color: "#a0713f", flammable: true },
-    straw: { label: "Straw", color: "#d9c15a", flammable: true, catches: 6 },
-    stone: { label: "Stone or brick floor", color: "#9a948a" },
-    sewage: { label: "Sewage", color: "#5f6b35", conducts: true },
-    coals: { label: "Forge coals", color: "#b8491f" }
+    // Man-made: the map's art shows what it is, so players don't see these unless the GM wants them to. catches: its own flat check for fire to spread to it.
+    woodfloor: { label: "Wood floor", color: "#a0713f", flammable: true, manMade: true },
+    straw: { label: "Straw", color: "#d9c15a", flammable: true, catches: 6, manMade: true },
+    stone: { label: "Stone or brick floor", color: "#9a948a", manMade: true },
+    sewage: { label: "Sewage", color: "#5f6b35", conducts: true, manMade: true },
+    coals: { label: "Forge coals", color: "#b8491f", manMade: true },
+    woodfurniture: { label: "Wood furniture", color: "#7d5430", flammable: true, manMade: true },
+    stonefurniture: { label: "Stone furniture", color: "#77726a", manMade: true },
+    metalfurniture: { label: "Metal furniture", color: "#6d727a", conducts: true, manMade: true }
 };
 
 // The traits a surface shares with a creature's weakness or resistance, among PF2e's types. Burning and deathly ground aren't here: their damage
@@ -44,7 +47,7 @@ export const SURFACE_TRAITS = {
     water: ["water"], steam: ["water"], ice: ["cold", "water"], mud: ["water", "earth"], rubble: ["earth"], plants: ["plant", "wood"], thicket: ["plant", "wood"],
     metal: ["metal"], light: ["light"], life: ["vitality"], sand: ["earth"], snow: ["cold", "water"], bramble: ["plant", "wood"], grass: ["plant", "wood"], flowers: ["plant", "wood"],
     gale: ["air"], frostfog: ["cold", "water"], dust: ["earth", "air"], acid: ["poison"], glass: ["earth"],
-    woodfloor: ["wood"], straw: ["plant", "wood"], stone: ["earth"], sewage: ["water", "poison"]
+    woodfloor: ["wood"], straw: ["plant", "wood"], stone: ["earth"], sewage: ["water", "poison"], woodfurniture: ["wood"], stonefurniture: ["earth"], metalfurniture: ["metal"]
 };
 
 // Ground that deals its own damage: its card counts weakness and resistance to its traits, for each square entered.

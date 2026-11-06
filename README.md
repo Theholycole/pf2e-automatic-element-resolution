@@ -59,12 +59,16 @@ Air also blows out fire and dries mud. From the element chart: earth turns water
 | Lava | 3d6 fire damage for each square entered and at each turn's start, 2d6 persistent fire, and difficult terrain |
 | Acid pool, ember, poison, death and frost clouds | 1d2 damage of that type for each square entered and at each turn's start; frost fog conceals too |
 | Gale | Difficult terrain for fliers, −1 to ranged attacks from inside |
-| Water, metal | Nothing until an element touches them |
+| Water | Nothing until an element touches it |
+| Metal floor | Conducts lightning; acid eats it |
 | Wood floor | Plain to walk on; catches fire, and fire spreads across it. Air, water and cold don't change it |
 | Straw | As wood floor, but fire spreads to it on a DC 6 flat check; air scatters it |
 | Stone or brick floor | Plain to walk on and doesn't burn; earth, sonic and acid break it into rubble |
 | Sewage | Difficult terrain, 1d2 poison for each square entered and at each turn's start; conducts lightning; fire boils it into a poison cloud, cold freezes it, plants drink it, vitality cleans it to water |
+| Wood, stone and metal furniture | Difficult terrain. Wood burns like a wood floor, stone breaks like a stone floor, and metal conducts and corrodes like a metal floor |
 | Forge coals | 1d2 fire for each square entered and at each turn's start, and never burns out; water or cold puts them out to rubble, air fans them into burning ground |
+
+Man-made surfaces, like floors, furniture, sewage and forge coals, are hidden from players by default, since the map's art shows them. They still work the same, and a world setting shows them.
 
 Damaging ground is set by Combat Simulator ratings: plain hazards, burning ground, brambles and lava rate as a typical spell at levels 5, 9, 13 and 17, for two foes making one 25-foot Stride. Their damage doesn't change with level.
 
@@ -153,6 +157,9 @@ A creature weak to a surface's trait takes damage equal to that weakness when it
 | Straw | Plant, wood |
 | Stone or brick floor | Earth |
 | Sewage | Water, poison |
+| Wood furniture | Wood |
+| Stone furniture | Earth |
+| Metal furniture | Metal |
 
 Burning, ember, poison and deathly ground have those damage types, so the same counting applies to them.
 
