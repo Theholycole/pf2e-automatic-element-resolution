@@ -116,7 +116,8 @@ const rollMessageOf = (item) => (item ? game.messages.contents.slice(-30).revers
 export function onApplyDamage(actor, params) {
     const options = params.rollOptions;
     const conducted = options instanceof Set ? options.has(CONDUCTED) : Array.isArray(options) && options.includes(CONDUCTED);
-    if (conducted || !game.user.isGM) return;
+    // (Whoever applied it, the GM or a player on their own creature, posts the card; only the GM can Apply it.)
+    if (conducted) return;
     const token = params.token?.document ?? params.token ?? actor.getActiveTokens?.(true, true)?.[0];
     const scene = token?.parent;
     if (!scene) return;

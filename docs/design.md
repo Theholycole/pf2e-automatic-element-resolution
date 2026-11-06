@@ -1,7 +1,5 @@
 # Design
 
-The full design is in Cole's design doc: https://claude.ai/artifact/7fJKYtAsZDXWHErkeDjXZW
-
 Cole's decisions (2026-11-05):
 
 - **Where:** this repo, requiring the core, with the environment module optional. The rules start here and move to the core when the Combat Simulator needs them.
@@ -41,4 +39,4 @@ A card's damage is applied with the roll option `elements:conducted`, and the li
 
 ## Not built yet
 
-Time passing outside combat, oil's save for those already standing where it's painted, puddles from heavy rain, and everything from the element interactions.
+Time passing outside combat, and surfaces the element chart names but no rules cover (the book's seven other elements).

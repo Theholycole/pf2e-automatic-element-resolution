@@ -114,7 +114,7 @@ const writeState = (message, state) => message.update({ content: cardHTML(state)
 // A creature the effect went on to hit directly: off an open card, so it isn't hit twice.
 export async function dropTarget(message, tokenId) {
     const state = cardOf(message);
-    if (!state?.targets.some((target) => target.id === tokenId && !target.applied)) return;
+    if (!message.isOwner || !state?.targets.some((target) => target.id === tokenId && !target.applied)) return;
     await writeState(message, { ...state, targets: state.targets.filter((target) => target.id !== tokenId) });
 }
 
