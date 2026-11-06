@@ -4,7 +4,7 @@ import { MODULE_ID, isActiveGM, paintSquares, registerSettings, surfacesOf } fro
 import { applyCard, bindCard, onRollMessage, postPlan } from "./cards.js";
 import { onApplyDamage, onCombatUpdate, onDamageMessage, onItemUsed, onRegionCreated } from "./triggers.js";
 import { openPaint } from "./paint.js";
-import { syncSceneField } from "./fields.js";
+import { installNeutralFields, syncSceneField } from "./fields.js";
 import { onSurfaceDeleted, regionEvent } from "./terrain.js";
 import { onTokenMoved, onTurnChange } from "./carry.js";
 import { ENVIRONMENT_ID, syncRain } from "./environment.js";
@@ -15,6 +15,8 @@ Hooks.once("init", () => {
     registerSettings();
     CONFIG.pf2eElementResolution = { regionEvent };
 });
+
+Hooks.once("setup", () => installNeutralFields());
 
 Hooks.once("ready", () => {
     const module = game.modules.get(MODULE_ID);

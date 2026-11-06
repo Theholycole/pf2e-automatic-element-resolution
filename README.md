@@ -111,7 +111,7 @@ An area effect's card offers to leave its element's surface: Sow for wood and pl
 
 ## Elemental fields
 
-**Fields** covers the whole scene or a marked area you paint. Inside, an element's effects deal half your level (at least 1) more as a status bonus, and you get that much resistance to it where PF2e has that damage type. Fields can cycle through elements every few rounds, so holding the right ground is worth fighting for.
+**Fields** covers the whole scene or a marked area you paint. Inside, an element's effects deal half your level (at least 1) more as a status bonus, and you get that much resistance to it and that much weakness to whatever beats it on the element chart: a fire field means water and earth hurt more. A **neutral field** removes all weaknesses and resistances inside it. Fields can cycle through elements every few rounds, so holding the right ground is worth fighting for.
 
 ## Weakness to the ground
 

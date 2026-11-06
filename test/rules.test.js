@@ -429,7 +429,11 @@ test("fields: a boost and resistance by level, and a cycle", () => {
     const fire = fieldEffect("fire");
     assert.deepEqual(fire.rules[0].predicate, ["item:trait:fire"]);
     assert.equal(fire.rules[1].key, "Resistance");
-    assert.equal(fieldEffect("water").rules.length, 1, "water isn't a damage type");
+    assert.deepEqual(fire.rules.filter((rule) => rule.key === "Weakness").map((rule) => rule.type).sort(), ["earth", "water"], "the chart's answers to fire");
+    assert.ok(fieldEffect("water").rules.some((rule) => rule.key === "Resistance" && rule.type === "water"));
+    assert.equal(fieldEffect("darkness").rules.some((rule) => rule.key === "Resistance"), false, "PF2e has no darkness type");
+    assert.deepEqual(fieldEffect("vitality").rules.filter((rule) => rule.key === "Weakness").map((rule) => rule.type).sort(), ["void"], "darkness has no type, so only void");
+    assert.deepEqual(fieldEffect("neutral").rules.map((rule) => rule.key), ["Note"]);
     assert.equal(nextField(["fire", "cold"], "fire"), "cold");
     assert.equal(nextField(["fire", "cold"], "cold"), "fire");
 });

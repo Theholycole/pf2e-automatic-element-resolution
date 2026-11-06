@@ -41,4 +41,4 @@ A card's damage is applied with the roll option `elements:conducted`, and the li
 
 ## Not built yet
 
-Time passing outside combat, weakness and resistance removal in fields (PF2e has no simple rule for it), and the book's other elements that have no surfaces (body, music, space, spirit, time).
+Time passing outside combat, and the book's other elements that have no surfaces (body, music, space, spirit, time).

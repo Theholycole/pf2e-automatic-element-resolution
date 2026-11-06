@@ -16,6 +16,12 @@ const STRONG_AGAINST = {
     wood: ["earth", "water"]
 };
 
+// What beats an element, for fields. The chart's "life" is PF2e's vitality.
+export const beatenBy = (element) => {
+    const name = element === "vitality" ? "life" : element;
+    return Object.keys(STRONG_AGAINST).filter((other) => STRONG_AGAINST[other].includes(name));
+};
+
 // Each surface's own element.
 const SURFACE_ELEMENTS = { water: "water", steam: "water", ice: "cold", snow: "cold", frostfog: "cold", burning: "fire", lava: "fire", embers: "fire", plants: "wood", thicket: "wood", grass: "wood", bramble: "wood", flowers: "life", mud: "earth", rubble: "earth", sand: "earth", dust: "earth", gale: "air", metal: "metal", darkness: "darkness", light: "light", death: "void", miasma: "void", toxic: "poison", life: "life" };
 

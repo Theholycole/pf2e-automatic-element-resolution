@@ -12,6 +12,32 @@ export const sceneFieldOf = (scene) => scene?.flags?.[MODULE_ID]?.field ?? null;
 const fieldRegions = (scene) => [...scene.regions].filter((region) => fieldOf(region));
 const squaresOfField = (region) => region.shapes.map((shape) => squareKey(Math.floor(shape.x / region.parent.grid.size), Math.floor(shape.y / region.parent.grid.size)));
 
+// A neutral field: PF2e has no rule that takes weaknesses and resistances away, so they're cleared from a creature's data once it's prepared.
+const inNeutralField = (actor) => (actor.itemTypes?.effect ?? []).some((effect) => effect.slug === "elements-field-neutral" || effect.slug === "elements-surface-field-neutral");
+export function installNeutralFields() {
+    // (Each creature class's own: their prepareData go on working after the base class's, and rules add to these lists there.)
+    for (const kind of ["character", "npc", "familiar"]) {
+        const wrapper = function (original, ...args) {
+            const result = original(...args);
+            if (inNeutralField(this)) {
+                this.system.attributes.weaknesses = [];
+                this.system.attributes.resistances = [];
+            }
+            return result;
+        };
+        // (libWrapper only takes a module's own calls, so not through the core's helper.)
+        if (game.modules.get("lib-wrapper")?.active && globalThis.libWrapper) {
+            globalThis.libWrapper.register(MODULE_ID, `CONFIG.PF2E.Actor.documentClasses.${kind}.prototype.prepareData`, wrapper, "WRAPPER");
+        } else {
+            const prototype = CONFIG.PF2E.Actor.documentClasses[kind].prototype;
+            const original = prototype.prepareData;
+            prototype.prepareData = function (...args) {
+                return wrapper.call(this, original.bind(this), ...args);
+            };
+        }
+    }
+}
+
 // Lay a field on these squares, or take them out of it if they're already in.
 export async function paintField(scene, keys, element) {
     const size = scene.grid.size;
