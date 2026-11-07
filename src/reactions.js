@@ -1,7 +1,7 @@
 // What happens when an element touches a surface or a creature: the reaction table, and the plan for a card. All of it is homebrew; the
 // comments name the official text a row leans on. Pure: the Foundry side reads the world into plain data and carries out the plan.
 
-import { SURFACES, bodyFrom, movedSquares, touches } from "./surfaces.js";
+import { SURFACES, bodyFrom, burstSquares, movedSquares, touches } from "./surfaces.js";
 import { breaksSurface } from "./matchups.js";
 
 export const DEFAULTS = { conductFraction: 0.5, conductReach: 30 };
@@ -26,7 +26,7 @@ export function elementsFrom({ damage = [], traits = [] } = {}) {
 // damage, from GM Core's environmental table. check: on a save, what each degree adds.
 export const SURFACE_REACTIONS = [
     // (Nothing official for water. Shocking Grasp and Thunderstrike are hard on metal armor.)
-    { key: "conduct", element: "electricity", surfaces: ["water", "metal", "sewage", "metalfurniture"], title: "Lightning through the {surface}", conduct: true },
+    { key: "conduct", element: "electricity", surfaces: ["water", "metal", "sewage", "metalfurniture", "mud"], title: "Lightning through the {surface}", conduct: true },
     // (Oil, 1 pint: 1d6 fire on a splash. The Oil Explosion hazard: basic Reflex for everyone there.)
     { key: "ignite-oil", element: "fire", surfaces: ["oil"], title: "The oil catches fire", to: "burning", hazard: true, persistentOnFailure: "1d6" },
     { key: "ignite-plants", element: "fire", surfaces: ["plants", "thicket", "grass", "bramble", "flowers", "woodfloor", "straw", "woodfurniture"], title: "Fire catches in the {surface}", to: "burning" },
@@ -39,13 +39,14 @@ export const SURFACE_REACTIONS = [
     { key: "freeze", element: "cold", surfaces: ["water"], title: "The water freezes", to: "ice", save: { failure: "icebound", criticalFailure: "icebound" } },
     // (Gust of Wind, as written: disperses fog and mist, puts out small non-magical fires. Air moves a cloud away from its source; with no source, it scatters.)
     { key: "drift", element: "air", surfaces: ["steam", "embers", "toxic", "miasma", "frostfog", "dust", "twister"], title: "The wind moves the {surface}", drift: true, to: null },
-    { key: "gust", element: "air", surfaces: ["burning"], title: "The wind blows the fire out", to: null },
+    { key: "gust", element: "air", surfaces: ["burning"], title: "The wind spreads the fire", fan: true },
     // From the element chart (see matchups.js): what's weak to what, as things that make sense on a battlefield.
     { key: "mud", element: "earth", surfaces: ["water"], title: "The water turns to mud", to: "mud" },
     { key: "bury", element: "earth", surfaces: ["burning"], title: "The earth smothers the fire", to: null },
     { key: "crush", element: "earth", surfaces: ["ice"], title: "The ice is crushed to rubble", to: "rubble" },
     { key: "dry-mud", element: "air", surfaces: ["mud"], title: "The wind dries the mud", to: null },
-    { key: "drink", element: "wood", surfaces: ["water", "mud"], title: "Plants drink up the {surface}", to: "plants" },
+    { key: "drink", element: "wood", surfaces: ["water"], title: "Plants drink up the {surface}", to: "plants" },
+    { key: "root", element: "wood", surfaces: ["mud", "rubble", "sand"], title: "Grass takes root in the {surface}", to: "grass" },
     { key: "grow", element: "water", surfaces: ["plants"], title: "The plants grow into a thicket", to: "thicket" },
     { key: "frost-thicket", element: "cold", surfaces: ["thicket"], title: "Frost kills back the thicket", to: "plants" },
     { key: "frost", element: "cold", surfaces: ["plants"], title: "Frost kills the plants", to: null },
@@ -76,7 +77,7 @@ export const SURFACE_REACTIONS = [
     { key: "quench-cold", element: "cold", surfaces: ["lava"], title: "The lava cools to rock", to: "rubble" },
     { key: "dilute", element: "water", surfaces: ["acid"], title: "The water dilutes the acid", to: "water" },
     { key: "tangle", element: "wood", surfaces: ["grass"], title: "The grass knots into brambles", to: "bramble" },
-    { key: "bloom", element: "vitality", surfaces: ["plants", "grass"], title: "The plants burst into flower", to: "flowers" },
+    { key: "bloom", element: "vitality", surfaces: ["plants", "grass", "thicket", "bramble", "mud"], title: "The {surface} bursts into flower", to: "flowers" },
     { key: "wilt", element: "poison", surfaces: ["flowers", "grass", "bramble"], title: "Poison kills the plants", to: null },
     { key: "frost-grass", element: "cold", surfaces: ["grass", "flowers", "bramble"], title: "Frost kills the plants", to: null },
     { key: "water-grass", element: "water", surfaces: ["grass"], title: "The grass thickens", to: "thicket" },
@@ -105,6 +106,21 @@ export const SURFACE_REACTIONS = [
     { key: "quench-coals", element: "water", surfaces: ["coals"], title: "The coals go out", to: "rubble" },
     { key: "chill-coals", element: "cold", surfaces: ["coals"], title: "The coals go out", to: "rubble" },
     { key: "fan-coals", element: "air", surfaces: ["coals"], title: "The wind fans the coals into flame", to: "burning" },
+    // What makes sense once it's said out loud.
+    { key: "spark-oil", element: "electricity", surfaces: ["oil"], title: "A spark lights the oil", to: "burning", hazard: true, persistentOnFailure: "1d6" },
+    { key: "spark-cloud", element: "electricity", surfaces: ["toxic"], title: "A spark explodes the poison cloud", to: "embers", hazard: true },
+    { key: "flash-dust", element: "fire", surfaces: ["dust"], title: "The dust cloud flashes into flame", to: "burning", hazard: true },
+    { key: "wash-oil", element: "water", surfaces: ["oil"], title: "The water washes the oil away", to: null },
+    { key: "wither-plants", element: "void", surfaces: ["plants", "grass", "flowers", "thicket", "bramble"], title: "The {surface} withers away", to: null },
+    { key: "eat-plants", element: "acid", surfaces: ["plants", "grass", "flowers", "woodfloor", "woodfurniture"], title: "The acid eats the {surface} away", to: null },
+    { key: "soak-up", element: "earth", surfaces: ["oil", "acid"], title: "The earth soaks up the {surface}", to: null },
+    { key: "smother-coals", element: "earth", surfaces: ["coals"], title: "The earth smothers the coals", to: null },
+    { key: "bake-mud", element: "fire", surfaces: ["mud"], title: "The fire bakes the mud dry", to: null },
+    { key: "freeze-mud", element: "cold", surfaces: ["mud"], title: "The mud freezes hard into rubble", to: "rubble" },
+    { key: "freeze-oil", element: "cold", surfaces: ["oil"], title: "The oil freezes into a slick", to: "ice" },
+    { key: "freeze-acid", element: "cold", surfaces: ["acid"], title: "The acid freezes", to: "ice" },
+    { key: "foul-water", element: "poison", surfaces: ["water"], title: "The poison fouls the water into sewage", to: "sewage" },
+    { key: "clear-snow", element: "air", surfaces: ["snow"], title: "The wind blows the snow away", to: null },
     // Sow and harvest: a wood effect makes standing plants burst around those in them. It's never a creature walking past.
     { key: "harvest", element: "wood", surfaces: ["plants", "thicket", "bramble", "flowers"], title: "Harvest: thorns burst from the {surface}", to: null, hazard: true, damageType: "piercing", persistentOnFailure: null, onlyTouched: true, notTrail: true }
 ];
@@ -120,7 +136,9 @@ export const CREATURE_REACTIONS = [
     { key: "thaw-creature", element: "fire", when: "frozen", title: "The fire thaws {name}", remove: "frozen" },
     { key: "ignite", element: "fire", when: "oil", title: "The oil on {name} goes up", removes: "oil", persistentFromOil: true },
     { key: "wash", element: "water", when: "oil", title: "The water washes the oil off {name}", remove: "oil" },
-    { key: "limn", element: "light", title: "{name} is limned in light", add: "limned", unless: "limned" }
+    { key: "limn", element: "light", title: "{name} is limned in light", add: "limned", unless: "limned" },
+    { key: "unlimn", element: "darkness", when: "limned", title: "The darkness swallows the light on {name}", remove: "limned" },
+    { key: "douse-creature", element: "water", when: "burning", title: "The water puts out the fire on {name}", putOut: true }
 ];
 
 // What each element leaves if the GM wants it. Wood's is the Sow of the book's powers.
@@ -179,6 +197,14 @@ export function surfacePlans(event) {
                     if (hazardFormula) plan.damage = [{ formula: hazardFormula, type: reaction.damageType ?? element }];
                     plan.check = { statistic: "reflex", basic: true, dc };
                     if (reaction.persistentOnFailure) plan.degrees = { failure: { persistent: reaction.persistentOnFailure }, criticalFailure: { persistent: reaction.persistentOnFailure } };
+                } else if (reaction.fan) {
+                    // (Wind on a fire: it takes hold of what can burn beside what the wind touched. Nothing beside it: no change.)
+                    const beside = burstSquares(keys, 5);
+                    const fuel = surfaces.filter((surface) => SURFACES[surface.material]?.flammable && !surface.fixed).flatMap((surface) => surface.squares).filter((key) => beside.includes(key));
+                    if (!fuel.length) continue;
+                    plan.squares = [];
+                    delete plan.to;
+                    plan.changes = [{ material: null, to: "burning", keys: fuel, words: "" }];
                 } else if (reaction.drift && source) {
                     const [dx, dy] = awayFrom(keys, source);
                     plan.to = undefined;
@@ -216,7 +242,7 @@ export function creaturePlans({ elements = [], creature, dc = null }) {
             plans.push({
                 key: row.key, element, title: titled(row.title, { name: creature.name }), targets: [creature.id], damage: [], squares: [],
                 leave: row.add === "wet" && !(creature.elevation > 0) ? creature.squares ?? [] : [],
-                add: row.add ? [row.add] : [], remove: row.remove ? [row.remove] : [], notes: row.note ? [row.note] : [],
+                add: row.add ? [row.add] : [], remove: row.remove ? [row.remove] : [], notes: row.note ? [row.note] : [], putOut: Boolean(row.putOut),
                 check: row.save || row.degrees ? { statistic: "reflex", basic: false, dc } : null,
                 degrees: row.persistentFromOil ? { automatic: { persistent: `${creature.oil}d6` } } : degrees,
                 ...(row.removes ? { remove: [row.removes] } : {})

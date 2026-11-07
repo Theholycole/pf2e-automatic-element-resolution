@@ -149,6 +149,7 @@ export function creatureOf(token) {
         metalArmor: METAL_GROUPS.has(actor?.wornArmor?.group),
         wet: Boolean(stateOf(actor, WET_SLUG)),
         limned: limnedOf(actor),
+        burning: (actor?.itemTypes?.condition ?? []).some((condition) => condition.slug === "persistent-damage" && condition.system?.persistent?.damageType === "fire"),
         oil: stateOf(actor, OIL_SLUG)?.system?.badge?.value ?? 0,
         frozen: stateOf(actor, FROZEN_SLUG)?.system?.badge?.value ?? 0
     };

@@ -7,7 +7,7 @@ export const SURFACES = {
     oil: { label: "Oil", color: "#4a3b22", flammable: true },
     plants: { label: "Plants", color: "#4f8a3a", flammable: true },
     thicket: { label: "Thicket", color: "#2f6b2a", flammable: true },
-    mud: { label: "Mud", color: "#6b4f2e" },
+    mud: { label: "Mud", color: "#6b4f2e", conducts: true },
     rubble: { label: "Rubble", color: "#857a6c" },
     ice: { label: "Ice", color: "#9fd8ee" },
     burning: { label: "Burning", color: "#e0602a" },

@@ -27,7 +27,7 @@ export async function postPlan(plan, scene, { from = null, once = null, fromMove
         else damage.push({ type: part.type, amount: part.amount });
     }
     const targets = (plan.targets ?? []).map((id) => scene.tokens.get(id)).filter((token) => token?.actor).map((token) => ({ id: token.id, tokenUuid: token.uuid, actorUuid: token.actor.uuid, name: token.name, degree: null, total: null, applied: false }));
-    const state = { key: plan.key, title: plan.title, sceneId: scene.id, from, once, fromMove, element: plan.element, damage, check: plan.check, penalties: plan.penalties ?? {}, degrees: plan.degrees ?? {}, conducted: Boolean(plan.conducted), targets, squares: plan.squares ?? [], material: plan.material ?? null, to: plan.to, add: plan.add ?? [], remove: plan.remove ?? [], notes: plan.notes ?? [], hazard: plan.hazard ?? null, changes: plan.changes ?? [], leave: plan.leave ?? [], leaveMaterial: plan.leaveMaterial ?? "water", doubled: plan.doubled ?? [], burst: plan.burst ?? null, push: plan.push ?? null, done: false };
+    const state = { key: plan.key, title: plan.title, sceneId: scene.id, from, once, fromMove, element: plan.element, damage, check: plan.check, penalties: plan.penalties ?? {}, degrees: plan.degrees ?? {}, conducted: Boolean(plan.conducted), targets, squares: plan.squares ?? [], material: plan.material ?? null, to: plan.to, add: plan.add ?? [], remove: plan.remove ?? [], notes: plan.notes ?? [], hazard: plan.hazard ?? null, putOut: Boolean(plan.putOut), changes: plan.changes ?? [], leave: plan.leave ?? [], leaveMaterial: plan.leaveMaterial ?? "water", doubled: plan.doubled ?? [], burst: plan.burst ?? null, push: plan.push ?? null, done: false };
     return ChatMessage.create({ content: cardHTML(state), speaker: { alias: "Elements" }, flags: { [MODULE_ID]: { [CARD]: state } } });
 }
 
@@ -257,6 +257,7 @@ export async function applyCard(message) {
             // (Back where the move began: its stored place, and no second card for moving.)
             if (row.push) await slide(token, row.push);
             if (row.returnTo) await token.update(row.returnTo, { teleport: true, animate: false, [MODULE_ID]: { forced: true } });
+            if (state.putOut) await actor.deleteEmbeddedDocuments("Item", actor.itemTypes.condition.filter((condition) => condition.slug === "persistent-damage" && condition.system?.persistent?.damageType === "fire").map((condition) => condition.id));
             for (const key of state.add ?? []) await setState(actor, key, true);
             for (const key of state.remove ?? []) await setState(actor, key, false);
             if (state.push) await slide(token, state.push);

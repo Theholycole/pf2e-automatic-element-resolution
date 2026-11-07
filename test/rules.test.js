@@ -10,7 +10,7 @@ import { carriedElements, enteredSquares, needsCard, pathSquares, trailPlans, we
 import { environmentMaterial } from "../src/surfaces.js";
 import { rainPuddles, roundPlan, tickSurfaces } from "../src/ticks.js";
 import { surfaceInfo } from "../src/hover.js";
-import { balancePlan, effectRulesFor, greasePlan, hazardAmount, hazardPlan, steady, terrainRules } from "../src/terrain.js";
+import { balancePlan, effectRulesFor, flowerHealing, greasePlan, hazardAmount, hazardPlan, steady, terrainRules } from "../src/terrain.js";
 
 const row = (y, from, to) => Array.from({ length: to - from + 1 }, (_, i) => squareKey(from + i, y));
 const puddle = { id: "water", material: "water", squares: row(0, 0, 3) };
@@ -258,7 +258,7 @@ test("new elements: words and aliases", () => {
 
 test("the chart's reactions change the ground as written", () => {
     const on = (element, material) => surfacePlans({ elements: [{ element, amount: 0 }], contact: [squareKey(0, 0)], surfaces: [{ id: "s", material, squares: [squareKey(0, 0)] }], creatures: [], dc: 18 })[0]?.to;
-    const table = [["earth", "water", "mud"], ["earth", "burning", null], ["earth", "ice", "rubble"], ["air", "burning", null], ["air", "mud", null], ["wood", "water", "plants"], ["wood", "mud", "plants"], ["water", "plants", "thicket"], ["cold", "thicket", "plants"], ["cold", "plants", null], ["poison", "thicket", "plants"], ["poison", "plants", null], ["metal", "ice", null], ["sonic", "ice", null], ["acid", "metal", null], ["light", "darkness", null], ["darkness", "light", null], ["light", "death", null], ["vitality", "death", null], ["void", "life", null], ["darkness", "life", null], ["fire", "thicket", "burning"]];
+    const table = [["earth", "water", "mud"], ["earth", "burning", null], ["earth", "ice", "rubble"], ["air", "mud", null], ["wood", "water", "plants"], ["water", "plants", "thicket"], ["cold", "thicket", "plants"], ["cold", "plants", null], ["poison", "thicket", "plants"], ["poison", "plants", null], ["metal", "ice", null], ["sonic", "ice", null], ["acid", "metal", null], ["light", "darkness", null], ["darkness", "light", null], ["light", "death", null], ["vitality", "death", null], ["void", "life", null], ["darkness", "life", null], ["fire", "thicket", "burning"]];
     for (const [element, material, to] of table) assert.equal(on(element, material), to, `${element} on ${material}`);
     assert.equal(on("sonic", "water"), undefined, "no row, chart off");
 });
@@ -610,4 +610,23 @@ test("starting ground: only on bare squares", () => {
     assert.equal(scatterPlan("tar", bare, pick).length, 1);
     assert.equal(scatterPlan("tar", ["0,0"], pick)[0].keys.length, 1, "only what's bare");
     assert.deepEqual(scatterPlan("nothing", bare, pick), []);
+});
+
+test("what makes sense: new reactions", () => {
+    const on = (element, material, extra = {}) => surfacePlans({ elements: [{ element, amount: 5 }], contact: ["0,0"], surfaces: [{ id: "s", material, squares: ["0,0"] }, ...(extra.surfaces ?? [])], creatures: extra.creatures ?? [], dc: 20, hazardFormula: "2d6" }).filter((plan) => plan.material === material)[0];
+    const table = [["electricity", "oil", "burning"], ["electricity", "toxic", "embers"], ["fire", "dust", "burning"], ["water", "oil", null], ["void", "plants", null], ["void", "bramble", null], ["acid", "woodfloor", null], ["acid", "flowers", null], ["earth", "oil", null], ["earth", "acid", null], ["earth", "coals", null], ["fire", "mud", null], ["cold", "mud", "rubble"], ["cold", "oil", "ice"], ["cold", "acid", "ice"], ["poison", "water", "sewage"], ["wood", "rubble", "grass"], ["wood", "sand", "grass"], ["wood", "mud", "grass"], ["vitality", "thicket", "flowers"], ["vitality", "mud", "flowers"], ["air", "snow", null]];
+    for (const [element, material, to] of table) assert.equal(on(element, material).to, to, `${element} on ${material}`);
+    assert.equal(on("electricity", "mud", { creatures: [{ id: "o", squares: ["0,0"], elevation: 0 }] }).conducted, true);
+    assert.equal(on("wood", "bramble").key, "harvest", "harvest stays");
+    // (The wind feeds a fire: only what can burn beside what it touched.)
+    const fan = surfacePlans({ elements: [{ element: "air", amount: 0 }], contact: ["0,0"], surfaces: [{ id: "f", material: "burning", squares: ["0,0", "9,9"] }, { id: "g", material: "grass", squares: ["1,0", "5,5"] }, { id: "r", material: "rubble", squares: ["0,1"] }], creatures: [], dc: 20 }).find((plan) => plan.key === "gust");
+    assert.deepEqual(fan.changes, [{ material: null, to: "burning", keys: ["1,0"], words: "" }]);
+    assert.equal(surfacePlans({ elements: [{ element: "air", amount: 0 }], contact: ["0,0"], surfaces: [{ id: "f", material: "burning", squares: ["0,0"] }], creatures: [], dc: 20 }).length, 0, "nothing to spread to");
+    const creature = (extra) => ({ id: "c", name: "Goblin", squares: ["0,0"], elevation: 0, ...extra });
+    assert.equal(creaturePlans({ elements: [{ element: "water" }], creature: creature({ burning: true }) }).find((plan) => plan.key === "douse-creature").putOut, true);
+    assert.equal(creaturePlans({ elements: [{ element: "water" }], creature: creature({}) }).some((plan) => plan.key === "douse-creature"), false);
+    assert.deepEqual(creaturePlans({ elements: [{ element: "darkness" }], creature: creature({ limned: true }) })[0].remove, ["limned"]);
+    assert.equal(flowerHealing(1), 1);
+    assert.equal(flowerHealing(8), 4);
+    assert.equal(terrainRules("flowers").effect, null);
 });

@@ -33,7 +33,7 @@ An element only changes the squares it touches: the one it's aimed at, those und
 
 Fliers don't touch the ground's surfaces. Reach, lightning's share, burst damage and the DC on surfaces are world settings.
 
-Air also blows out fire and dries mud. From the element chart: earth turns water to mud, smothers fire and crushes ice to rubble; plants drink up water and mud; water grows plants into a thicket; cold and poison kill plants back; metal and sonic shatter ice; acid eats metal; light and darkness cancel each other; light and vitality clear deathly ground; void and darkness wither living ground. Air and poison destroy brambles, air and wood remove broken glass, and void stills an acid pool. A world setting lets the chart decide pairs with no reaction of their own.
+Air spreads fire to what can burn beside it, dries mud and clears snow. From the element chart: earth turns water to mud, smothers fire and crushes ice to rubble; plants drink up water; water grows plants into a thicket; cold and poison kill plants back; metal and sonic shatter ice; acid eats metal; light and darkness cancel each other; light and vitality clear deathly ground; void and darkness wither living ground. Air and poison destroy brambles, air and wood remove broken glass, and void stills an acid pool. Electricity sparks oil and poison clouds and conducts through mud. Fire bakes mud dry and flashes dust into flame. Water washes away oil. Void and acid kill plants, and acid eats wood too. Earth soaks up oil and acid and smothers coals. Cold freezes mud to rubble and oil and acid to ice. Poison fouls water into sewage. Wood roots grass in mud, rubble and sand, and vitality blooms thicket, brambles and mud into flowers. A world setting lets the chart decide pairs with no reaction of their own.
 
 ## What surfaces do
 
@@ -55,7 +55,7 @@ Air also blows out fire and dries mud. From the element chart: earth turns water
 | Brambles | 3d6 piercing damage for each square entered, and difficult terrain |
 | Broken glass | 1d2 piercing damage for each square entered |
 | Tall grass, dust cloud | Concealed inside it |
-| Flowers | Fast healing 1 inside it |
+| Flowers | Heals half a creature's level (at least 1) at the end of its turn inside them; undead aren't healed |
 | Lava | 3d6 fire damage for each square entered and at each turn's start, 2d6 persistent fire, and difficult terrain |
 | Acid pool, ember, poison, death and frost clouds | 1d2 damage of that type for each square entered and at each turn's start; frost fog conceals too |
 | Gale | Difficult terrain for fliers, −1 to ranged attacks from inside |
@@ -106,7 +106,8 @@ See `docs/design.md` for how it works.
 - **Oil:** moving through oil, starting a turn in it, or having it painted under you adds a stack. A stack of any size is a −5-foot status penalty to Speeds. The next fire damage turns every stack into 1d6 persistent fire each, so 3 stacks is 3d6. Water washes it off. Casting Grease or throwing Oil (1 pint) offers to make it: Grease has no area in PF2e's data, so its card lays 4 squares at your target, or you paint them.
 - **Wet + lightning:** a Wet creature takes double conducted damage, and anyone who fails is Shocked (−2 to AC and saves against electricity for 2 rounds).
 - **Wet + cold:** Reflex, or Frozen 1, 2 or 4 by degree. Frozen is a −5-foot status penalty to Speeds per point; an Interact lowers it by 4 (the Frozen card has a button for it), and fire thaws it at once.
-- **Light:** Limned, so it can't be concealed: the condition is taken off if it's added, or already there.
+- **Light:** Limned, so it can't be concealed: the condition is taken off if it's added, or already there. Darkness removes it.
+- **On fire:** water puts out persistent fire.
 
 ## Forced movement on ice
 
