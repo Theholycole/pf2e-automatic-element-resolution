@@ -10,7 +10,7 @@ import { carriedElements, enteredSquares, needsCard, pathSquares, trailPlans, we
 import { environmentMaterial } from "../src/surfaces.js";
 import { rainPuddles, roundPlan, tickSurfaces } from "../src/ticks.js";
 import { surfaceInfo } from "../src/hover.js";
-import { balancePlan, effectRulesFor, flowerHealing, greasePlan, hazardAmount, hazardPlan, steady, terrainRules } from "../src/terrain.js";
+import { balancePlan, effectRulesFor, greasePlan, hazardAmount, hazardPlan, steady, terrainRules } from "../src/terrain.js";
 
 const row = (y, from, to) => Array.from({ length: to - from + 1 }, (_, i) => squareKey(from + i, y));
 const puddle = { id: "water", material: "water", squares: row(0, 0, 3) };
@@ -626,7 +626,5 @@ test("what makes sense: new reactions", () => {
     assert.equal(creaturePlans({ elements: [{ element: "water" }], creature: creature({ burning: true }) }).find((plan) => plan.key === "douse-creature").putOut, true);
     assert.equal(creaturePlans({ elements: [{ element: "water" }], creature: creature({}) }).some((plan) => plan.key === "douse-creature"), false);
     assert.deepEqual(creaturePlans({ elements: [{ element: "darkness" }], creature: creature({ limned: true }) })[0].remove, ["limned"]);
-    assert.equal(flowerHealing(1), 1);
-    assert.equal(flowerHealing(8), 4);
-    assert.equal(terrainRules("flowers").effect, null);
+    assert.deepEqual(terrainRules("flowers").effect.rules, [{ key: "FastHealing", value: "max(1,floor(@actor.level/2))" }]);
 });

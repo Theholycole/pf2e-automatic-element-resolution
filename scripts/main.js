@@ -6,7 +6,7 @@ import { onApplyDamage, onCombatUpdate, onDamageMessage, onItemUsed, onRegionCre
 import { openPaint } from "./paint.js";
 import { installNeutralFields, syncSceneField } from "./fields.js";
 import { migrateSurfaces, onSurfaceDeleted, regionEvent } from "./terrain.js";
-import { flowersTurn, onTokenMoved, onTurnChange } from "./carry.js";
+import { onTokenMoved, onTurnChange } from "./carry.js";
 import { ENVIRONMENT_ID, syncRain } from "./environment.js";
 import { stormTurn } from "./storms.js";
 import { installHover } from "./hover.js";
@@ -40,7 +40,6 @@ Hooks.on("deleteRegion", safely(onSurfaceDeleted));
 Hooks.on("updateCombat", safely(onCombatUpdate));
 Hooks.on("updateCombat", safely(onTurnChange));
 Hooks.on("updateCombat", safely(stormTurn));
-Hooks.on("updateCombat", safely(flowersTurn));
 Hooks.on("moveToken", safely(onTokenMoved));
 Hooks.on("moveToken", safely((token) => releaseFromIce(token.parent)));
 Hooks.on("updateRegion", safely((region) => releaseFromIce(region.parent)));
