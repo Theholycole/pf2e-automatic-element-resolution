@@ -8,7 +8,7 @@ import { finishBurst } from "./objects.js";
 import { noteSlide } from "./carry.js";
 import { BASIC_SAVE } from "../src/reactions.js";
 import { hazardAmount } from "../src/terrain.js";
-import { SURFACES } from "../src/surfaces.js";
+import { SURFACES, nextTo } from "../src/surfaces.js";
 
 const CARD = "card";
 export const CONDUCTED = "elements:conducted";
@@ -176,12 +176,30 @@ export function bindThaw(message, html) {
     if (!uuid) return;
     const button = html.querySelector("[data-elements-thaw]");
     if (!button) return;
-    const actor = fromUuidSync(uuid)?.actor;
-    if (!actor?.isOwner) return button.remove();
+    const token = fromUuidSync(uuid);
+    const actor = token?.actor;
+    if (!actor) return button.remove();
     button.addEventListener("click", async (event) => {
         event.preventDefault();
-        await stackState(actor, "frozen", -THAW);
+        if (actor.isOwner) return stackState(actor, "frozen", -THAW);
+        // (An adjacent ally's player can't change it, so the GM's client does, on the request's message.)
+        const ally = alliesBeside(token, game.user)[0];
+        if (!ally) return ui.notifications.warn("One of your creatures needs to be next to it.");
+        await ChatMessage.create({ speaker: { alias: "Elements" }, content: `<div class="pf2e-elements-card"><p>${escapeHTML(ally.name)} breaks some of the ice off ${escapeHTML(token.name)}.</p></div>`, flags: { [MODULE_ID]: { thawRequest: uuid } } });
     });
+}
+
+const alliesBeside = (token, user) => {
+    const squares = creatureOf(token).squares;
+    return [...token.parent.tokens].filter((other) => other.id !== token.id && other.actor?.testUserPermission?.(user, "OWNER") && nextTo(creatureOf(other).squares, squares));
+};
+
+// A player's Interact for an ally: done here, on the active GM's client, if they really have a creature next to it.
+export async function onThawRequest(message) {
+    const uuid = message.flags?.[MODULE_ID]?.thawRequest;
+    if (!uuid || !isActiveGM()) return;
+    const token = await fromUuid(uuid).catch(() => null);
+    if (token?.actor && message.author && alliesBeside(token, message.author).length) await stackState(token.actor, "frozen", -THAW);
 }
 
 // Stuck in the ice: its Escape, against the DC that froze it, as often as it likes.

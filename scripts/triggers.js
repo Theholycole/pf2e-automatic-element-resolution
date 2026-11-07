@@ -51,7 +51,7 @@ async function react({ scene, token, elements, actor, item, key, creatureOnly = 
     const direct = directOf(key, token.id);
     const creature = creatureOf(token);
     const dc = dcFrom(actor, item) ?? sceneDC(scene);
-    if (!creatureOnly) await postOnce(surfacePlans({ source: sourceOf(actor), elements, contact: (creature.elevation ?? 0) > 0 ? [] : creature.squares, surfaces: surfacesOf(scene), creatures: creaturesOf(scene), direct, dc, hazardFormula: hazardFormula(), settings: ruleSettings() }), scene, key);
+    if (!creatureOnly) await postOnce(surfacePlans({ source: sourceOf(actor), elements, contact: (creature.elevation ?? 0) > 0 ? [] : creature.squares, surfaces: surfacesOf(scene), creatures: creaturesOf(scene), direct, dc, hazardFormula: hazardFormula(scene), settings: ruleSettings() }), scene, key);
     await postOnce(creaturePlans({ elements, creature, dc }), scene, `${key}:${token.id}`);
     // (It may already be on a card from an earlier target of the same roll.)
     for (const message of recentCards()) if (cardOf(message).from === key && cardOf(message).conducted) await dropTarget(message, token.id);
@@ -92,7 +92,7 @@ export async function onRegionCreated(region) {
     if (!all.length) return;
     const item = origin.uuid ? await fromUuid(origin.uuid).catch(() => null) : null;
     const dc = dcFrom(item?.actor, item) ?? sceneDC(scene);
-    await postOnce(surfacePlans({ source: sourceOf(item?.actor), elements: all, contact, surfaces: surfacesOf(scene), creatures: creaturesOf(scene), dc, hazardFormula: hazardFormula(), settings: ruleSettings() }), scene, region.id);
+    await postOnce(surfacePlans({ source: sourceOf(item?.actor), elements: all, contact, surfaces: surfacesOf(scene), creatures: creaturesOf(scene), dc, hazardFormula: hazardFormula(scene), settings: ruleSettings() }), scene, region.id);
     for (const { token, object } of objectsIn(scene, contact)) if (setOff(object, all)) await burstObject(token, object);
     if (game.settings.get(MODULE_ID, "offerSurfaces")) {
         for (const { element } of all) {
@@ -119,7 +119,7 @@ export const canvasSquare = (clientX, clientY) => {
 
 // A message's element, aimed at a square: what's there reacts. Whether anything did.
 export async function reactAtSquare(message, scene, key) {
-    const plans = surfacePlans({ source: sourceOf(message.actor), elements: messageElements(message), contact: [key], surfaces: surfacesOf(scene), creatures: creaturesOf(scene), dc: dcFrom(message.actor, message.item) ?? sceneDC(scene), hazardFormula: hazardFormula(), settings: ruleSettings() });
+    const plans = surfacePlans({ source: sourceOf(message.actor), elements: messageElements(message), contact: [key], surfaces: surfacesOf(scene), creatures: creaturesOf(scene), dc: dcFrom(message.actor, message.item) ?? sceneDC(scene), hazardFormula: hazardFormula(scene), settings: ruleSettings() });
     await postOnce(plans, scene, `${message.id}:aim:${key}`);
     return plans.length > 0;
 }
@@ -153,7 +153,7 @@ export async function onItemUsed(message) {
     const creature = creatureOf(token);
     const contact = burstSquares(creature.squares, use.feet ?? 10);
     if (use.harvest) {
-        await postOnce(surfacePlans({ elements: [{ element: "wood", amount: 0 }], contact, surfaces: surfacesOf(scene), creatures: creaturesOf(scene), direct: [token.id], dc: dcFrom(item.actor, item) ?? sceneDC(scene), hazardFormula: hazardFormula(), settings: ruleSettings() }).filter((plan) => plan.key === "harvest"), scene, message.id);
+        await postOnce(surfacePlans({ elements: [{ element: "wood", amount: 0 }], contact, surfaces: surfacesOf(scene), creatures: creaturesOf(scene), direct: [token.id], dc: dcFrom(item.actor, item) ?? sceneDC(scene), hazardFormula: hazardFormula(scene), settings: ruleSettings() }).filter((plan) => plan.key === "harvest"), scene, message.id);
         return;
     }
     const plan = leavePlan(item.name, use.element, contact, surfacesOf(scene));

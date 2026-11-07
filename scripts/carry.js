@@ -64,7 +64,7 @@ async function touchGround(token, contact, entry = null, options = {}) {
     if (weakness) await postPlan(weakness, scene, entry ? { fromMove: token.id } : {});
     const elements = elementsOf(token.actor);
     if (!elements.length) return;
-    const plans = trailPlans({ creature: creatureOf(token), elements, contact, surfaces, creatures: creaturesOf(scene), dc: dcFrom(token.actor, null) ?? sceneDC(scene), hazardFormula: hazardFormula() });
+    const plans = trailPlans({ creature: creatureOf(token), elements, contact, surfaces, creatures: creaturesOf(scene), dc: dcFrom(token.actor, null) ?? sceneDC(scene), hazardFormula: hazardFormula(scene) });
     const ask = game.settings.get(MODULE_ID, "askTrails");
     for (const plan of plans) {
         if (needsCard(plan, ask)) await postPlan(plan, scene, entry ? { fromMove: token.id } : {});

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { bodyFrom, openSquares, squareKey, touches } from "../src/surfaces.js";
+import { bodyFrom, openSquares, squareKey, touches, nextTo } from "../src/surfaces.js";
 import { OBJECTS, burstFormula, burstPlan, goesOff, objectInfo, objectsOf, setOff } from "../src/objects.js";
 import { STARTING_GROUND, STORMS, madnessPlan, pickWarnings, scatterPlan, stormInfo, strikePlan, swarmPlan, windPlan } from "../src/storms.js";
 import { fieldEffect, nextField } from "../src/fields.js";
@@ -632,4 +632,10 @@ test("what makes sense: new reactions", () => {
     assert.equal(groundHealing("flowers", 1), 1);
     assert.equal(groundHealing("flowers", 8), 4);
     assert.equal(groundHealing("water", 8), 0);
+});
+
+test("next to: touching squares, diagonals included", () => {
+    assert.equal(nextTo(["5,5"], ["6,6"]), true);
+    assert.equal(nextTo(["5,5"], ["5,7"]), false);
+    assert.equal(nextTo(["5,5", "6,5"], ["7,5"]), true);
 });

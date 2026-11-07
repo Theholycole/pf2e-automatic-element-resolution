@@ -15,9 +15,9 @@ export const STORMS = {
     gloom: { label: "Death shroud", strike: "Death", element: "void", type: "void", surface: "miasma" },
     sunbeams: { label: "Sunbeams", strike: "A sunbeam", element: "light", type: "fire", surface: "light" },
     firestorm: { label: "Firestorm", strike: "Falling fire", element: "fire", type: "fire", surface: "burning", fireLasts: true },
-    // Scaled: its damage goes by the party's level, as an object's burst does. Escalates: one more mark each round.
-    reckoning: { label: "Reckoning", strike: "Holy light", element: "light", type: "spirit", surface: null, scaled: true, escalates: true },
-    solarflare: { label: "Solar flare", strike: "A solar flare", element: "fire", type: "fire", surface: null, scaled: true, feet: 15, degrees: { failure: { condition: "dazzled" }, criticalFailure: { condition: "dazzled" } } },
+    // Escalates: one more mark each round.
+    reckoning: { label: "Reckoning", strike: "Holy light", element: "light", type: "spirit", surface: null, escalates: true },
+    solarflare: { label: "Solar flare", strike: "A solar flare", element: "fire", type: "fire", surface: null, feet: 15, degrees: { failure: { condition: "dazzled" }, criticalFailure: { condition: "dazzled" } } },
     // No marks: these act on what's under the sky each round, or each turn.
     gusts: { label: "Gusts", kind: "wind", feet: 5 },
     hurricane: { label: "Hurricane", kind: "wind", feet: 30, save: true },

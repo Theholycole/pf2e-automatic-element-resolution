@@ -1,7 +1,7 @@
 // The GM's Elements window: paint surfaces, place objects, choose the weather, lay fields, and make the items. Picking a surface, object or field
 // and then clicking or dragging on the scene puts it down. Painting a square with what it already is clears it.
 
-import { MODULE_ID, escapeHTML, hazardFormula, paintSquares, squareAt, surfacesOf } from "./foundry.js";
+import { MODULE_ID, escapeHTML, paintSquares, squareAt, strikeFormula, surfacesOf } from "./foundry.js";
 import { onOilPainted } from "./terrain.js";
 import { partyLevel, placeObject } from "./objects.js";
 import { paintField, sceneFieldOf, setCycle, setSceneField, cycleOf } from "./fields.js";
@@ -11,7 +11,6 @@ import { SURFACES } from "../src/surfaces.js";
 import { OBJECTS, objectInfo } from "../src/objects.js";
 import { surfaceInfo } from "../src/hover.js";
 import { STARTING_GROUND, STORMS, stormInfo } from "../src/storms.js";
-import { burstFormula } from "../src/objects.js";
 import { FIELD_ELEMENTS, fieldEffect, fieldLabel } from "../src/fields.js";
 
 let picked = undefined;
@@ -67,7 +66,6 @@ const tooltipText = ({ title, lines = [], traits = [], reactions = [] }) => [`<s
 const tooltip = (info) => `data-tooltip="${escapeHTML(tooltipText(info))}"`;
 const objectTip = (object) => tooltip(objectInfo(object, objectLevel));
 const fieldTip = (element) => tooltip({ title: fieldLabel(element), lines: [fieldEffect(element).description] });
-const stormStrike = (storm) => (storm.scaled ? burstFormula(partyLevel(canvas.scene)) : hazardFormula().replace(/^(\d+)d/, (_, count) => `${Number(count) * 2}d`));
 
 const swatch = (color) => `<span class="pf2e-elements-swatch" style="background:${color}"></span>`;
 
@@ -120,7 +118,7 @@ export function openPaint() {
         // (A dropdown's options can't be hovered: what's chosen is spelled out under it.)
         const stormWords = () => {
             const storm = STORMS[root.querySelector("[data-storm]").value];
-            root.querySelector("[data-storm-info]").textContent = storm ? stormInfo(storm, stormStrike(storm)).lines[0] : "";
+            root.querySelector("[data-storm-info]").textContent = storm ? stormInfo(storm, strikeFormula(canvas.scene)).lines[0] : "";
         };
         const fieldWords = () => {
             const element = root.querySelector("[data-scene-field]").value;

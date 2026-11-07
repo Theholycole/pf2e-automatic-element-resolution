@@ -1,7 +1,8 @@
 // Objects on the map (src/objects.js): a PF2e hazard actor for each kind, in a world folder, with Hardness and Hit Points. Damage to one, or an area
 // of the right element, makes its card; the GM's Apply does the damage, leaves the ground, removes it, and sets off what else that reaches.
 
-import { MODULE_ID, creatureOf, creaturesOf } from "./foundry.js";
+import { MODULE_ID, creatureOf, creaturesOf, partyLevel } from "./foundry.js";
+export { partyLevel };
 import { postPlan } from "./cards.js";
 import { OBJECTS, burstFormula, burstPlan, setOff } from "../src/objects.js";
 import { levelDC } from "../src/reactions.js";
@@ -26,13 +27,6 @@ async function objectActor(key) {
         prototypeToken: { name: object.label, actorLink: false, width: 1, height: 1, texture: { src: object.img, tint: object.tint }, disposition: CONST.TOKEN_DISPOSITIONS.NEUTRAL },
         flags: { [MODULE_ID]: { object: key } }
     });
-}
-
-// The level an object takes unless the GM says: the party's, as far as the scene's player characters say, then the world's.
-export function partyLevel(scene) {
-    const levelsOf = (actors) => actors.filter((actor) => actor?.type === "character" && actor.hasPlayerOwner).map((actor) => actor.level);
-    const here = levelsOf([...(scene?.tokens ?? [])].map((token) => token.actor));
-    return Math.max(1, ...(here.length ? here : levelsOf([...game.actors])));
 }
 
 // Put one on the scene, at these canvas coordinates and this level (on its token: the same barrel can be any level).

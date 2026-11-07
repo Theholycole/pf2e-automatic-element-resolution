@@ -94,6 +94,15 @@ export const movedSquares = (keys, dx, dy) => keys.map((key) => {
 export const squareKey = (column, row) => `${column},${row}`;
 export const squareOf = (key) => key.split(",").map(Number);
 
+// Whether two creatures' squares touch, diagonals included.
+export const nextTo = (squares, others) => squares.some((key) => {
+    const [column, row] = squareOf(key);
+    return others.some((other) => {
+        const [otherColumn, otherRow] = squareOf(other);
+        return Math.abs(column - otherColumn) <= 1 && Math.abs(row - otherRow) <= 1;
+    });
+});
+
 const NEIGHBOURS = [[1, 0, 5], [-1, 0, 5], [0, 1, 5], [0, -1, 5], [1, 1, 7.5], [1, -1, 7.5], [-1, 1, 7.5], [-1, -1, 7.5]];
 
 // The squares joined to these ones, through squares in the set, and how far each is. reach (feet): no farther (diagonals count 7.5,

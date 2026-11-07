@@ -105,7 +105,7 @@ See `docs/design.md` for how it works.
 
 - **Oil:** moving through oil, starting a turn in it, or having it painted under you adds a stack. A stack of any size is a −5-foot status penalty to Speeds. The next fire damage turns every stack into 1d6 persistent fire each, so 3 stacks is 3d6. Water washes it off. Casting Grease or throwing Oil (1 pint) offers to make it: Grease has no area in PF2e's data, so its card lays 4 squares at your target, or you paint them.
 - **Wet + lightning:** a Wet creature takes double conducted damage, and anyone who fails is Shocked (−2 to AC and saves against electricity for 2 rounds).
-- **Wet + cold:** Reflex, or Frozen 1, 2 or 4 by degree. Frozen is a −5-foot status penalty to Speeds per point; an Interact lowers it by 4 (the Frozen card has a button for it), and fire thaws it at once.
+- **Wet + cold:** Reflex, or Frozen 1, 2 or 4 by degree. Frozen is a −5-foot status penalty to Speeds per point; an Interact lowers it by 4 (the Frozen card has a button for it, for its owner or a player with a creature next to it), and fire thaws it at once.
 - **Light:** Limned, so it can't be concealed: the condition is taken off if it's added, or already there. Darkness removes it.
 - **On fire:** water puts out persistent fire.
 
@@ -127,7 +127,7 @@ An area effect's card offers to leave its element's surface: Sow for wood and pl
 
 ## Elemental weather
 
-**Weather** picks lightning, meteors, hail, acid rain, whirlwinds, tremors, thorns, poison, death, sunbeams or a firestorm. Reckoning marks one more square each round for spirit damage, and a solar flare hits 15 feet for fire and dazzled on a failure; both scale with the party's level. Each new round, marked squares under the sky are hit and new ones are marked, so everyone has a round to get clear or lure someone in. The environment module's thunderstorm brings lightning by itself.
+**Weather** picks lightning, meteors, hail, acid rain, whirlwinds, tremors, thorns, poison, death, sunbeams or a firestorm. Reckoning marks one more square each round for spirit damage, and a solar flare hits 15 feet for fire and dazzled on a failure. Strikes, lit oil, Harvest and exploding clouds all scale with the party's level, unless a world setting picks a fixed damage category (then strikes deal double it). Each new round, marked squares under the sky are hit and new ones are marked, so everyone has a round to get clear or lure someone in. The environment module's thunderstorm brings lightning by itself.
 
 Some kinds have no marks. Each acts under the sky:
 

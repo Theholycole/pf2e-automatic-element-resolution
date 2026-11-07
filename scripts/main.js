@@ -1,7 +1,7 @@
 // PF2e Automatic Element Resolution: a battlefield that reacts to elements. See docs/design.md.
 
 import { MODULE_ID, isActiveGM, isLimnedItem, limnedOf, paintSquares, registerSettings, surfacesOf } from "./foundry.js";
-import { applyCard, bindCard, bindEscape, bindThaw, onRollMessage, postPlan, releaseFromIce } from "./cards.js";
+import { applyCard, bindCard, bindEscape, bindThaw, onRollMessage, onThawRequest, postPlan, releaseFromIce } from "./cards.js";
 import { onApplyDamage, onCombatUpdate, onDamageMessage, onItemUsed, onRegionCreated } from "./triggers.js";
 import { openPaint } from "./paint.js";
 import { installNeutralFields, syncSceneField } from "./fields.js";
@@ -32,6 +32,7 @@ Hooks.once("ready", () => {
 
 Hooks.on("createChatMessage", safely(async (message) => {
     await onRollMessage(message);
+    await onThawRequest(message);
     await onDamageMessage(message);
     await onItemUsed(message);
 }));

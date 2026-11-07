@@ -1,13 +1,11 @@
 // Elemental weather (src/storms.js), on the active GM's client: each new round, marked squares from last round get hit, and new ones are marked. The
 // GM chooses it in the Elements window; the environment module's thunderstorm brings lightning by itself.
 
-import { MODULE_ID, creatureOf, creaturesOf, hazardFormula, isActiveGM, isCreatureActor, paintSquares, sceneDC, surfacesOf, ruleSettings } from "./foundry.js";
+import { MODULE_ID, creatureOf, creaturesOf, hazardFormula, isActiveGM, isCreatureActor, paintSquares, partyLevel, strikeFormula, surfaceDC, surfacesOf, ruleSettings } from "./foundry.js";
 import { postPlan } from "./cards.js";
 import { groundWeather, skySquares } from "./environment.js";
-import { partyLevel } from "./objects.js";
 import { sceneFieldOf, setSceneField } from "./fields.js";
 import { STARTING_GROUND, STORMS, madnessPlan, pickWarnings, scatterPlan, strikeFeet, strikePlan, swarmPlan, windPlan } from "../src/storms.js";
-import { burstFormula } from "../src/objects.js";
 import { levelDC } from "../src/reactions.js";
 import { burstSquares, movedSquares, squareKey, squareOf } from "../src/surfaces.js";
 import { surfacePlans } from "../src/reactions.js";
@@ -31,13 +29,13 @@ async function strike(scene, region) {
     await region.delete();
     if (!storm) return;
     const creatures = creaturesOf(scene);
-    const dc = storm.scaled ? levelDC(partyLevel(scene)) : sceneDC(scene);
-    const formula = storm.scaled ? burstFormula(partyLevel(scene)) : hazardFormula().replace(/^(\d+)d/, (_, count) => `${Number(count) * 2}d`);
+    const dc = surfaceDC({ level: partyLevel(scene) });
+    const formula = strikeFormula(scene);
     const amount = (await new Roll(formula).evaluate()).total;
     const hit = strikePlan(storm, centre, creatures, { dc, amount });
     await postPlan(hit, scene);
     // (It reaches the ground too: lightning through a puddle, fire on oil.)
-    for (const plan of surfacePlans({ elements: [{ element: storm.element, amount }], contact: burstSquares([centre], strikeFeet(storm)), surfaces: surfacesOf(scene), creatures, direct: hit.targets, dc, hazardFormula: hazardFormula(), settings: ruleSettings() })) await postPlan(plan, scene);
+    for (const plan of surfacePlans({ elements: [{ element: storm.element, amount }], contact: burstSquares([centre], strikeFeet(storm)), surfaces: surfacesOf(scene), creatures, direct: hit.targets, dc, hazardFormula: hazardFormula(scene), settings: ruleSettings() })) await postPlan(plan, scene);
 }
 
 async function mark(scene, key, centre, round) {

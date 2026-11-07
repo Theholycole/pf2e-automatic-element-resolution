@@ -6,6 +6,7 @@ import { levelDC } from "../src/reactions.js";
 import { applyTerrain, syncInside } from "./terrain.js";
 import { cutEnvironment, environmentSurfaces } from "./environment.js";
 import { categoryDice } from "../../pf2e-resolution-core/src/environment/catalog.js";
+import { burstFormula } from "../src/objects.js";
 
 export const MODULE_ID = "pf2e-automatic-element-resolution";
 const SURFACE = "surface";
@@ -23,7 +24,7 @@ export const isActiveGM = () => game.users.activeGM?.isSelf ?? game.user.isGM;
 export function registerSettings() {
     game.settings.register(MODULE_ID, "conductReach", { name: "Lightning's reach (feet)", hint: "How far lightning runs along water or metal from where it touched.", scope: "world", config: true, type: Number, default: 30 });
     game.settings.register(MODULE_ID, "conductFraction", { name: "Lightning's share of the damage", hint: "Those it reaches take this fraction of the roll, with a basic Reflex save.", scope: "world", config: true, type: Number, default: 0.5 });
-    game.settings.register(MODULE_ID, "hazardCategory", { name: "Burst damage", hint: "GM Core's environmental damage category for oil catching fire, Harvest and exploding clouds. Weather strikes deal double. Damaging ground and objects have their own numbers.", scope: "world", config: true, type: String, default: "minor", choices: { minor: "Minor", moderate: "Moderate", major: "Major", massive: "Massive" } });
+    game.settings.register(MODULE_ID, "hazardCategory", { name: "Burst damage", hint: "For oil catching fire, Harvest, exploding clouds and weather strikes. By the party's level, or a fixed GM Core environmental damage category. Damaging ground and objects have their own numbers.", scope: "world", config: true, type: String, default: "level", choices: { level: "By the party's level", minor: "Minor", moderate: "Moderate", major: "Major", massive: "Massive" } });
     game.settings.register(MODULE_ID, "waterRounds", { name: "Rounds until a puddle dries", hint: "0: never.", scope: "world", config: true, type: Number, default: 10 });
     game.settings.register(MODULE_ID, "steamRounds", { name: "Rounds until steam fades", hint: "0: never.", scope: "world", config: true, type: Number, default: 2 });
     game.settings.register(MODULE_ID, "burningRounds", { name: "Rounds until a fire burns out", hint: "0: never.", scope: "world", config: true, type: Number, default: 3 });
@@ -51,7 +52,24 @@ export const squareAt = squareOfPoint;
 export const surfaceRegions = (scene) => [...(scene?.regions ?? [])].filter((region) => SURFACES[region.flags?.[MODULE_ID]?.[SURFACE]]);
 const regionOf = (scene, material) => surfaceRegions(scene).find((region) => region.flags[MODULE_ID][SURFACE] === material);
 
-export const hazardFormula = () => categoryDice(game.settings.get(MODULE_ID, "hazardCategory"));
+// The party's level, as far as the scene's player characters say, then the world's.
+export function partyLevel(scene) {
+    const levelsOf = (actors) => actors.filter((actor) => actor?.type === "character" && actor.hasPlayerOwner).map((actor) => actor.level);
+    const here = levelsOf([...(scene?.tokens ?? [])].map((token) => token.actor));
+    return Math.max(1, ...(here.length ? here : levelsOf([...game.actors])));
+}
+
+// What a sudden burst of an element deals: lit oil, Harvest, a cloud going up. By the party's level, as an object's burst, unless the GM picked a category.
+export function hazardFormula(scene) {
+    const category = game.settings.get(MODULE_ID, "hazardCategory");
+    return category === "level" ? burstFormula(partyLevel(scene)) : categoryDice(category);
+}
+
+// A weather strike: the same by level. A category's is doubled, as it hits so few.
+export function strikeFormula(scene) {
+    const formula = hazardFormula(scene);
+    return game.settings.get(MODULE_ID, "hazardCategory") === "level" ? formula : formula.replace(/^(\d+)d/, (_, count) => `${Number(count) * 2}d`);
+}
 export const surfaceDC = (actor) => game.settings.get(MODULE_ID, "surfaceDC") || levelDC(actor?.level ?? 0);
 export const surfaceMaterial = (region) => SURFACES[region?.flags?.[MODULE_ID]?.[SURFACE]] ? region.flags[MODULE_ID][SURFACE] : null;
 
