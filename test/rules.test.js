@@ -590,7 +590,8 @@ test("the new weather", () => {
     assert.equal(swarmPlan(creatures[0], 9).degrees.automatic.persistent, "1d4");
     assert.equal(madnessPlan(creatures, 20).degrees.failure.condition, "maddened");
     const holy = fieldEffect("holy");
-    assert.deepEqual(holy.rules.at(-1), { key: "FastHealing", value: "max(1,floor(@actor.level/2))" });
+    assert.equal(holy.rules.some((rule) => rule.key === "FastHealing"), false);
+    assert.match(holy.description, /end of its turn/);
     assert.ok(holy.rules.some((rule) => rule.key === "Resistance" && rule.type === "light"));
     assert.match(holy.description, /^Inside a holy field/);
     assert.deepEqual(hazardPlan(terrainRules("twister"), { id: "t", name: "G" }, 1).damage, [{ formula: "1d2", type: "bludgeoning" }]);

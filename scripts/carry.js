@@ -130,16 +130,17 @@ export async function onTokenMoved(token, movement) {
     await touchGround(token, path, entry, { entering });
 }
 
-// A turn ending on ground that heals: it does, unless the creature is undead (vitality).
+// A turn ending on ground or in a field that heals: it does, unless the creature is undead (vitality).
 export async function healingGroundTurn(combat, change, options) {
     if (!isActiveGM() || options?.direction !== 1 || !("turn" in change || "round" in change)) return;
     const token = combat.combatants.get(combat.previous?.combatantId)?.token;
     const actor = token?.actor;
     if (!token?.parent || !isCreatureActor(actor) || actor.traits?.has?.("undead") || (actor.hitPoints?.value ?? 0) >= (actor.hitPoints?.max ?? 0)) return;
     const creature = creatureOf(token);
-    if ((creature.elevation ?? 0) > 0) return;
-    const under = surfacesOf(token.parent).filter((surface) => surface.squares.some((key) => creature.squares.includes(key)));
-    const amount = Math.max(0, ...under.map((surface) => groundHealing(surface.material, actor.level)));
+    const under = (creature.elevation ?? 0) > 0 ? [] : surfacesOf(token.parent).filter((surface) => surface.squares.some((key) => creature.squares.includes(key)));
+    // (A holy field reaches those in the air too, and counts like flowers. The most of them, not all.)
+    const holy = actor.itemTypes.effect.some((effect) => /^elements-(surface-)?field-holy$/.test(effect.slug ?? ""));
+    const amount = Math.max(0, ...under.map((surface) => groundHealing(surface.material, actor.level)), holy ? groundHealing("flowers", actor.level) : 0);
     if (amount) await actor.applyDamage({ damage: -amount, token });
 }
 

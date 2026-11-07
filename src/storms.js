@@ -35,7 +35,7 @@ const KIND_WORDS = {
     hurricane: "Each round the wind pushes everything under the sky the same way: Fortitude, or 30 feet (prone on a critical failure), 5 feet on a success, none on a critical success.",
     swarm: "At the end of each creature's turn under the sky, a 50% chance of a bite: piercing damage by level and 1d4 bleed.",
     madness: "Each round each creature under the sky has a 25% chance of a Will save, or it's confused until the end of its next turn.",
-    holyday: "The whole scene is a holy field: a light field, with fast healing of half a creature's level (at least 1).",
+    holyday: "The whole scene is a holy field: a light field that heals half a creature's level (at least 1) at the end of its turn.",
     twisters: "Each round a new twister appears under the sky, and those there wander 10 feet. A twister deals bludgeoning damage on entering and at each turn's start, and fades after a few rounds."
 };
 export function stormInfo(storm, formula) {

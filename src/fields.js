@@ -17,7 +17,7 @@ export function fieldEffect(element) {
     // (A holy day's: a light field, and everyone heals.)
     if (element === "holy") {
         const light = fieldEffect("light");
-        return { name, rules: [...light.rules, { key: "FastHealing", value: SCALED }], description: `${light.description.replace("Inside a light field", "Inside a holy field").replace(" Homebrew.", "")}, and fast healing of half its level (at least 1). Homebrew.` };
+        return { name, rules: light.rules, description: `${light.description.replace("Inside a light field", "Inside a holy field").replace(" Homebrew.", "")}, and it heals half its level (at least 1) at the end of its turn. Homebrew.` };
     }
     if (element === NEUTRAL) return { name, rules: [{ key: "Note", selector: "ac", title: name, text: "Weaknesses and resistances don't count here." }], description: "Inside a neutral field: no weaknesses or resistances. Immunities still count. Homebrew." };
     const weakTo = beatenBy(element).filter((other) => HAS_TYPE.has(other));

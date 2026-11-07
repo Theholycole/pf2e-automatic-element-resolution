@@ -135,7 +135,7 @@ Some kinds have no marks. Each acts under the sky:
 - **Hurricane:** the same, with Fortitude: 30 feet on a failure (prone on a critical failure), 5 on a success, none on a critical success.
 - **Biting swarm:** at the end of each creature's turn, a 50% chance of piercing damage by level and 1d4 bleed.
 - **Madness:** each round each creature has a 25% chance of a Will save, or it's confused until the end of its next turn.
-- **Holy day:** the whole scene is a holy field: a light field, with fast healing of half a creature's level (at least 1).
+- **Holy day:** the whole scene is a holy field: a light field that heals half a creature's level (at least 1) at the end of its turn, unless it's undead.
 - **Wandering twisters:** each round a new twister appears and those there wander 10 feet. A twister deals 1d2 bludgeoning on entering and at each turn's start.
 
 **Starting ground** on the same tab scatters overgrowth, fires, a flood, an oil spill, rubble or a lava pool over the bare squares, with one click. Snow and severe cold freeze standing water, severe heat dries it twice as fast, and a firestorm's fires don't burn out.
