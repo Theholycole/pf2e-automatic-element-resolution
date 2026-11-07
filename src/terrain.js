@@ -8,7 +8,7 @@
 //   darkness: concealed inside, as steam.
 //   burning: homebrew. Damage on entry and at the start of each turn, with the 1d6 persistent fire of lit oil.
 //   death: homebrew. Void damage on entry and at the start of each turn (the undead aren't affected).
-//   life: homebrew. Fast healing 1 inside.
+//   life: homebrew. Heals at the end of a creature's turn inside.
 //   light: nothing until an element touches it.
 //   water and metal: nothing until an element touches them.
 
@@ -48,8 +48,8 @@ export function terrainRules(material, { dc = null } = {}) {
         case "darkness": return { ...bare, effect: { name: `Surface: ${bare.label}`, rules: [{ key: "GrantItem", uuid: CONCEALED, allowDuplicate: true, onDeleteActions: { granter: "cascade", grantee: "cascade" } }] }, summary: ["Concealed inside it."] };
         case "burning": return { ...bare, hazard: { formula: HAZARD_DAMAGE.burning, type: "fire", persistent: "1d6", words: "burns in the flames" }, summary: ["Fire damage on entering and at the start of each turn in it, and 1d6 persistent fire."] };
         case "death": return { ...bare, hazard: { formula: HAZARD_DAMAGE.plain, type: "void", words: "withers on the deathly ground" }, summary: ["Void damage on entering and at the start of each turn in it."] };
-        case "life": return { ...bare, effect: { name: "Surface: Living ground", rules: [{ key: "FastHealing", value: 1 }] }, summary: ["Fast healing 1 inside it."] };
-        case "flowers": return { ...bare, effect: { name: "Surface: Flowers", rules: [{ key: "FastHealing", value: "max(1,floor(@actor.level/2))" }] }, summary: ["Fast healing of half a creature's level (at least 1) inside it."] };
+        case "life": return { ...bare, summary: ["Heals 1 at the end of a creature's turn inside it."] };
+        case "flowers": return { ...bare, summary: ["Heals half a creature's level (at least 1) at the end of its turn inside it."] };
         case "sand": return fromFeature(material, "sand-shallow", dc);
         case "snow": return fromFeature(material, "snow", dc);
         case "bramble": return { ...fromFeature(material, "undergrowth-light", dc), hazard: { formula: HAZARD_DAMAGE.bramble, type: "piercing", when: "enter", words: "is cut up by the brambles" }, summary: ["Difficult terrain, and piercing damage for each move into it."] };
@@ -94,6 +94,9 @@ export const greasePlan = (rules, token, statistic) => ({
 
 // A formula, that many hits rolled together: "2d6" three times is "6d6", and "1" is "3".
 const timesOver = (formula, times) => (/^\d+$/.test(formula) ? String(Number(formula) * times) : formula.replace(/^(\d+)d/, (_, count) => `${Number(count) * times}d`));
+
+// What the ground heals at the end of a creature's turn on it (not fast healing, which PF2e does at the start of a turn, as a roll to apply).
+export const groundHealing = (material, level) => (material === "flowers" ? Math.max(1, Math.floor((Number(level) || 0) / 2)) : material === "life" ? 1 : 0);
 
 // The card for being in it.
 // squares: how many it entered on this move, each one a hit of the damage.

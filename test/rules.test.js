@@ -10,7 +10,7 @@ import { carriedElements, enteredSquares, needsCard, pathSquares, trailPlans, we
 import { environmentMaterial } from "../src/surfaces.js";
 import { rainPuddles, roundPlan, tickSurfaces } from "../src/ticks.js";
 import { surfaceInfo } from "../src/hover.js";
-import { balancePlan, effectRulesFor, greasePlan, hazardAmount, hazardPlan, steady, terrainRules } from "../src/terrain.js";
+import { balancePlan, effectRulesFor, greasePlan, groundHealing, hazardAmount, hazardPlan, steady, terrainRules } from "../src/terrain.js";
 
 const row = (y, from, to) => Array.from({ length: to - from + 1 }, (_, i) => squareKey(from + i, y));
 const puddle = { id: "water", material: "water", squares: row(0, 0, 3) };
@@ -280,7 +280,8 @@ test("new surfaces' rules", () => {
     assert.deepEqual(terrainRules("rubble").costs, { walk: 2, climb: 2 });
     assert.deepEqual(terrainRules("thicket").costs, { walk: 3, climb: 3 });
     assert.match(terrainRules("darkness").effect.rules[0].uuid, /DmAIPqOBomZ7H95W/);
-    assert.deepEqual(terrainRules("life").effect.rules, [{ key: "FastHealing", value: 1 }]);
+    assert.equal(terrainRules("life").effect, null);
+    assert.equal(groundHealing("life", 9), 1);
     const death = hazardPlan(terrainRules("death"), { id: "t", name: "Goblin" });
     assert.equal(death.title, "Goblin withers on the deathly ground");
     assert.deepEqual(death.damage, [{ formula: "1d2", type: "void" }]);
@@ -626,5 +627,8 @@ test("what makes sense: new reactions", () => {
     assert.equal(creaturePlans({ elements: [{ element: "water" }], creature: creature({ burning: true }) }).find((plan) => plan.key === "douse-creature").putOut, true);
     assert.equal(creaturePlans({ elements: [{ element: "water" }], creature: creature({}) }).some((plan) => plan.key === "douse-creature"), false);
     assert.deepEqual(creaturePlans({ elements: [{ element: "darkness" }], creature: creature({ limned: true }) })[0].remove, ["limned"]);
-    assert.deepEqual(terrainRules("flowers").effect.rules, [{ key: "FastHealing", value: "max(1,floor(@actor.level/2))" }]);
+    assert.equal(terrainRules("flowers").effect, null);
+    assert.equal(groundHealing("flowers", 1), 1);
+    assert.equal(groundHealing("flowers", 8), 4);
+    assert.equal(groundHealing("water", 8), 0);
 });

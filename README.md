@@ -49,13 +49,13 @@ Air spreads fire to what can burn beside it, dries mud and clears snow. From the
 | Rubble | GM Core's rubble: difficult terrain |
 | Darkness | Concealed inside it |
 | Deathly ground | 1d2 void damage for each square entered and at each turn's start (a card each time; the undead aren't affected) |
-| Living ground | Fast healing 1 inside it |
+| Living ground | Heals 1 at the end of a creature's turn inside it; undead aren't healed |
 | Light | Limned inside it: it can't be concealed |
 | Sand, snow | GM Core: difficult terrain |
 | Brambles | 3d6 piercing damage for each square entered, and difficult terrain |
 | Broken glass | 1d2 piercing damage for each square entered |
 | Tall grass, dust cloud | Concealed inside it |
-| Flowers | Fast healing of half a creature's level (at least 1) inside them |
+| Flowers | Heals half a creature's level (at least 1) at the end of its turn inside them; undead aren't healed |
 | Lava | 3d6 fire damage for each square entered and at each turn's start, 2d6 persistent fire, and difficult terrain |
 | Acid pool, ember, poison, death and frost clouds | 1d2 damage of that type for each square entered and at each turn's start; frost fog conceals too |
 | Gale | Difficult terrain for fliers, −1 to ranged attacks from inside |

@@ -6,7 +6,7 @@ import { MODULE_ID, creatureOf, creaturesOf, dcFrom, hazardFormula, isActiveGM, 
 import { cardOf, postPlan, stackState } from "./cards.js";
 import { squareKey } from "../src/surfaces.js";
 import { bestStatistic, ignoredOf, immuneTo } from "./terrain.js";
-import { balancePlan, hazardPlan, steady, terrainRules } from "../src/terrain.js";
+import { balancePlan, groundHealing, hazardPlan, steady, terrainRules } from "../src/terrain.js";
 import { SURFACES } from "../src/surfaces.js";
 import { carriedElements, enteredSquares, needsCard, pathSquares, trailPlans, weaknessPlan } from "../src/carry.js";
 
@@ -128,6 +128,19 @@ export async function onTokenMoved(token, movement) {
     const entering = enteredSquares(path, start);
     await enterGround(token, movement, enteredSquares(pathSquares(points, size, { aloft: true }), start), entering);
     await touchGround(token, path, entry, { entering });
+}
+
+// A turn ending on ground that heals: it does, unless the creature is undead (vitality).
+export async function healingGroundTurn(combat, change, options) {
+    if (!isActiveGM() || options?.direction !== 1 || !("turn" in change || "round" in change)) return;
+    const token = combat.combatants.get(combat.previous?.combatantId)?.token;
+    const actor = token?.actor;
+    if (!token?.parent || !isCreatureActor(actor) || actor.traits?.has?.("undead") || (actor.hitPoints?.value ?? 0) >= (actor.hitPoints?.max ?? 0)) return;
+    const creature = creatureOf(token);
+    if ((creature.elevation ?? 0) > 0) return;
+    const under = surfacesOf(token.parent).filter((surface) => surface.squares.some((key) => creature.squares.includes(key)));
+    const amount = Math.max(0, ...under.map((surface) => groundHealing(surface.material, actor.level)));
+    if (amount) await actor.applyDamage({ damage: -amount, token });
 }
 
 // A turn starting: the squares it's standing on.
