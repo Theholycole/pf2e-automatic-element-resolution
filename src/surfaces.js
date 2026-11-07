@@ -30,6 +30,7 @@ export const SURFACES = {
     miasma: { label: "Death cloud", color: "#5d5266", cloud: true, drifts: true },
     frostfog: { label: "Frost fog", color: "#c5e3f0", cloud: true, drifts: true },
     dust: { label: "Dust cloud", color: "#b5a58a", cloud: true, drifts: true },
+    twister: { label: "Twister", color: "#a9bcc8", cloud: true, drifts: true },
     // Man-made: the map's art shows what it is, so players don't see these unless the GM wants them to. catches: its own flat check for fire to spread to it.
     woodfloor: { label: "Wood floor", color: "#a0713f", flammable: true, manMade: true },
     straw: { label: "Straw", color: "#d9c15a", flammable: true, catches: 6, manMade: true },
@@ -47,11 +48,11 @@ export const SURFACE_TRAITS = {
     water: ["water"], steam: ["water"], ice: ["cold", "water"], mud: ["water", "earth"], rubble: ["earth"], plants: ["plant", "wood"], thicket: ["plant", "wood"],
     metal: ["metal"], light: ["light"], life: ["vitality"], sand: ["earth"], snow: ["cold", "water"], bramble: ["plant", "wood"], grass: ["plant", "wood"], flowers: ["plant", "wood"],
     gale: ["air"], frostfog: ["cold", "water"], dust: ["earth", "air"], acid: ["poison"], glass: ["earth"],
-    woodfloor: ["wood"], straw: ["plant", "wood"], stone: ["earth"], sewage: ["water", "poison"], woodfurniture: ["wood"], stonefurniture: ["earth"], metalfurniture: ["metal"]
+    woodfloor: ["wood"], straw: ["plant", "wood"], stone: ["earth"], sewage: ["water", "poison"], woodfurniture: ["wood"], stonefurniture: ["earth"], metalfurniture: ["metal"], twister: ["air"]
 };
 
 // Ground that deals its own damage: its card counts weakness and resistance to its traits, for each square entered.
-export const HAZARD_GROUND = new Set(["burning", "death", "bramble", "glass", "lava", "acid", "embers", "toxic", "miasma", "frostfog", "sewage", "coals"]);
+export const HAZARD_GROUND = new Set(["burning", "death", "bramble", "glass", "lava", "acid", "embers", "toxic", "miasma", "frostfog", "sewage", "coals", "twister"]);
 
 // The environment module's terrain, by its feature's key. Fixed: deep or flowing water, which conducts but doesn't boil or freeze away.
 const ENVIRONMENT_FEATURES = {

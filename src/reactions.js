@@ -38,7 +38,7 @@ export const SURFACE_REACTIONS = [
     { key: "smother", element: "cold", surfaces: ["burning"], title: "The cold puts out the fire", to: null },
     { key: "freeze", element: "cold", surfaces: ["water"], title: "The water freezes", to: "ice", save: { failure: "icebound", criticalFailure: "icebound" } },
     // (Gust of Wind, as written: disperses fog and mist, puts out small non-magical fires. Air moves a cloud away from its source; with no source, it scatters.)
-    { key: "drift", element: "air", surfaces: ["steam", "embers", "toxic", "miasma", "frostfog", "dust"], title: "The wind moves the {surface}", drift: true, to: null },
+    { key: "drift", element: "air", surfaces: ["steam", "embers", "toxic", "miasma", "frostfog", "dust", "twister"], title: "The wind moves the {surface}", drift: true, to: null },
     { key: "gust", element: "air", surfaces: ["burning"], title: "The wind blows the fire out", to: null },
     // From the element chart (see matchups.js): what's weak to what, as things that make sense on a battlefield.
     { key: "mud", element: "earth", surfaces: ["water"], title: "The water turns to mud", to: "mud" },
@@ -81,8 +81,8 @@ export const SURFACE_REACTIONS = [
     { key: "frost-grass", element: "cold", surfaces: ["grass", "flowers", "bramble"], title: "Frost kills the plants", to: null },
     { key: "water-grass", element: "water", surfaces: ["grass"], title: "The grass thickens", to: "thicket" },
     // Clouds and air.
-    { key: "fan", element: "fire", surfaces: ["gale"], title: "The gale fans into an ember cloud", to: "embers" },
-    { key: "freeze-gale", element: "cold", surfaces: ["gale"], title: "The gale freezes into fog", to: "frostfog" },
+    { key: "fan", element: "fire", surfaces: ["gale", "twister"], title: "The {surface} fans into an ember cloud", to: "embers" },
+    { key: "freeze-gale", element: "cold", surfaces: ["gale", "twister"], title: "The {surface} freezes into fog", to: "frostfog" },
     { key: "douse-embers", element: "water", surfaces: ["embers"], title: "The water turns the embers to steam", to: "steam" },
     { key: "chill-embers", element: "cold", surfaces: ["embers"], title: "The cold puts out the embers", to: null },
     { key: "chill-steam", element: "cold", surfaces: ["steam"], title: "The steam freezes into fog", to: "frostfog" },

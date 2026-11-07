@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { bodyFrom, openSquares, squareKey, touches } from "../src/surfaces.js";
 import { OBJECTS, burstFormula, burstPlan, goesOff, objectInfo, objectsOf, setOff } from "../src/objects.js";
-import { STORMS, pickWarnings, stormInfo, strikePlan } from "../src/storms.js";
+import { STARTING_GROUND, STORMS, madnessPlan, pickWarnings, scatterPlan, stormInfo, strikePlan, swarmPlan, windPlan } from "../src/storms.js";
 import { fieldEffect, nextField } from "../src/fields.js";
 import { creaturePlans, elementsFrom, leavePlan, levelDC, shareOf, surfacePlans } from "../src/reactions.js";
 import { carriedElements, enteredSquares, needsCard, pathSquares, trailPlans, weaknessPlan } from "../src/carry.js";
@@ -568,4 +568,46 @@ test("furniture: difficult terrain of its material", () => {
     assert.equal(on("electricity", "metalfurniture").conducted, true);
     assert.equal(on("acid", "metalfurniture").to, null);
     assert.deepEqual(surfaceInfo("woodfurniture").traits, ["wood"]);
+});
+
+test("the new weather", () => {
+    const creatures = [{ id: "a", name: "A", squares: ["5,5"], elevation: 0 }, { id: "b", name: "B", squares: ["9,9"], elevation: 0 }];
+    const flare = strikePlan(STORMS.solarflare, "5,5", creatures, { dc: 20, amount: 9 });
+    assert.deepEqual(flare.targets, ["a"]);
+    assert.equal(flare.degrees.failure.condition, "dazzled");
+    assert.equal(strikePlan(STORMS.reckoning, "5,5", creatures, { dc: 20, amount: 9 }).damage[0].type, "spirit");
+    assert.equal(strikePlan(STORMS.solarflare, "7,7", creatures, { dc: 20, amount: 9 }).targets.length, 2, "15 feet");
+    const gust = windPlan(STORMS.gusts, creatures, { pick: () => 2 });
+    assert.equal(gust.title, "Gusts: the wind blows east");
+    assert.deepEqual(gust.degrees.automatic.push, { feet: 5, dx: 1, dy: 0, reason: "Gusts" });
+    const hurricane = windPlan(STORMS.hurricane, creatures, { dc: 20, pick: () => 0 });
+    assert.equal(hurricane.check.statistic, "fortitude");
+    assert.equal(hurricane.degrees.failure.push.feet, 30);
+    assert.equal(hurricane.degrees.criticalFailure.condition, "prone");
+    assert.equal(hurricane.degrees.criticalSuccess, undefined);
+    assert.deepEqual(swarmPlan(creatures[0], 9).damage, [{ formula: "3d4", type: "piercing" }]);
+    assert.equal(swarmPlan(creatures[0], 9).degrees.automatic.persistent, "1d4");
+    assert.equal(madnessPlan(creatures, 20).degrees.failure.condition, "maddened");
+    const holy = fieldEffect("holy");
+    assert.deepEqual(holy.rules.at(-1), { key: "FastHealing", value: "max(1,floor(@actor.level/2))" });
+    assert.ok(holy.rules.some((rule) => rule.key === "Resistance" && rule.type === "light"));
+    assert.match(holy.description, /^Inside a holy field/);
+    assert.deepEqual(hazardPlan(terrainRules("twister"), { id: "t", name: "G" }, 1).damage, [{ formula: "1d2", type: "bludgeoning" }]);
+    for (const storm of Object.values(STORMS)) assert.ok(stormInfo(storm, "2d6").lines[0].length > 10, storm.label);
+});
+
+test("starting ground: only on bare squares", () => {
+    const bare = [];
+    for (let x = 0; x < 20; x++) for (let y = 0; y < 15; y++) bare.push(`${x},${y}`);
+    const pick = (n) => Math.floor(n / 2);
+    for (const key of Object.keys(STARTING_GROUND)) {
+        const parts = scatterPlan(key, bare, pick);
+        assert.ok(parts.length, key);
+        for (const { keys } of parts) assert.ok(keys.every((each) => bare.includes(each)), key);
+    }
+    assert.equal(scatterPlan("wildfire", bare, pick)[0].keys.length, 9);
+    assert.equal(scatterPlan("wildfire", bare, pick)[0].material, "burning");
+    assert.equal(scatterPlan("tar", bare, pick).length, 1);
+    assert.equal(scatterPlan("tar", ["0,0"], pick)[0].keys.length, 1, "only what's bare");
+    assert.deepEqual(scatterPlan("nothing", bare, pick), []);
 });

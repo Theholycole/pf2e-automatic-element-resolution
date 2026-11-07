@@ -126,7 +126,18 @@ An area effect's card offers to leave its element's surface: Sow for wood and pl
 
 ## Elemental weather
 
-**Weather** picks lightning, meteors, hail, acid rain, whirlwinds, tremors, thorns, poison, death, sunbeams or a firestorm. Each new round, marked squares under the sky are hit and new ones are marked, so everyone has a round to get clear or lure someone in. The environment module's thunderstorm brings lightning by itself. Snow and severe cold freeze standing water, severe heat dries it twice as fast, and a firestorm's fires don't burn out.
+**Weather** picks lightning, meteors, hail, acid rain, whirlwinds, tremors, thorns, poison, death, sunbeams or a firestorm. Reckoning marks one more square each round for spirit damage, and a solar flare hits 15 feet for fire and dazzled on a failure; both scale with the party's level. Each new round, marked squares under the sky are hit and new ones are marked, so everyone has a round to get clear or lure someone in. The environment module's thunderstorm brings lightning by itself.
+
+Some kinds have no marks. Each acts under the sky:
+
+- **Gusts:** each round the wind pushes everything 5 feet, all the same way.
+- **Hurricane:** the same, with Fortitude: 30 feet on a failure (prone on a critical failure), 5 on a success, none on a critical success.
+- **Biting swarm:** at the end of each creature's turn, a 50% chance of piercing damage by level and 1d4 bleed.
+- **Madness:** each round each creature has a 25% chance of a Will save, or it's confused until the end of its next turn.
+- **Holy day:** the whole scene is a holy field: a light field, with fast healing of half a creature's level (at least 1).
+- **Wandering twisters:** each round a new twister appears and those there wander 10 feet. A twister deals 1d2 bludgeoning on entering and at each turn's start.
+
+**Starting ground** on the same tab scatters overgrowth, fires, a flood, an oil spill, rubble or a lava pool over the bare squares, with one click. Snow and severe cold freeze standing water, severe heat dries it twice as fast, and a firestorm's fires don't burn out.
 
 ## Elemental fields
 

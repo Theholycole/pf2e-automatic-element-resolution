@@ -4,7 +4,7 @@
 import { SURFACE_REACTIONS } from "./reactions.js";
 import { SURFACES, movedSquares, squareKey, squareOf } from "./surfaces.js";
 
-export const DEFAULT_LIVES = { water: 10, steam: 2, burning: 3, embers: 3, toxic: 3, miasma: 3, frostfog: 3, dust: 3, gale: 3 };
+export const DEFAULT_LIVES = { water: 10, steam: 2, burning: 3, embers: 3, toxic: 3, miasma: 3, frostfog: 3, dust: 3, gale: 3, twister: 3 };
 export const SPREAD_DC = 11;
 
 const AROUND = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];

@@ -15,6 +15,7 @@ export const FROZEN_SLUG = "elements-frozen";
 export const SHOCKED_SLUG = "elements-shocked";
 export const LIMNED_SLUG = "elements-limned";
 export const ICEBOUND_SLUG = "elements-icebound";
+export const MADDENED_SLUG = "elements-maddened";
 
 export const escapeHTML = (text) => String(text ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 export const isActiveGM = () => game.users.activeGM?.isSelf ?? game.user.isGM;
@@ -37,7 +38,7 @@ export function registerSettings() {
     game.settings.register(MODULE_ID, "surfaceDC", { name: "DC for checks on surfaces", hint: "For Balance on ice and oil. 0: GM Core's DC for the creature's level.", scope: "world", config: true, type: Number, default: 0 });
 }
 export const ruleSettings = () => ({ conductReach: game.settings.get(MODULE_ID, "conductReach"), conductFraction: game.settings.get(MODULE_ID, "conductFraction"), matchups: game.settings.get(MODULE_ID, "matchups") });
-const CLOUDS = ["embers", "toxic", "miasma", "frostfog", "dust", "gale"];
+const CLOUDS = ["embers", "toxic", "miasma", "frostfog", "dust", "gale", "twister"];
 export const tickSettings = () => ({ lives: { water: game.settings.get(MODULE_ID, "waterRounds"), steam: game.settings.get(MODULE_ID, "steamRounds"), burning: game.settings.get(MODULE_ID, "burningRounds"), ...Object.fromEntries(CLOUDS.map((cloud) => [cloud, game.settings.get(MODULE_ID, "cloudRounds")])) }, spreadDC: game.settings.get(MODULE_ID, "spreadDC") });
 
 const squareOfPoint = (scene, x, y) => {
@@ -185,6 +186,9 @@ export const STATE_EFFECTS = {
     icebound: effect("Stuck in the ice", ICEBOUND_SLUG, "icons/magic/water/ice-crystal-white.webp", UNLIMITED, [
         { key: "GrantItem", uuid: "Compendium.pf2e.conditionitems.Item.eIcWbB5o3pP6OIMe", allowDuplicate: true, onDeleteActions: { granter: "cascade", grantee: "cascade" } }
     ], "Frozen in place: immobilized until it Escapes, or the ice under it breaks or melts. Homebrew."),
+    maddened: effect("Maddened", MADDENED_SLUG, "icons/magic/control/hypnosis-mesmerism-swirl.webp", { value: 1, unit: "rounds", expiry: "turn-end", sustained: false }, [
+        { key: "GrantItem", uuid: "Compendium.pf2e.conditionitems.Item.yblD8fOR1J8rDwEQ", allowDuplicate: true, onDeleteActions: { granter: "cascade", grantee: "cascade" } }
+    ], "Madness has it: confused until the end of its next turn. Homebrew."),
     shocked: effect("Shocked", SHOCKED_SLUG, "icons/magic/lightning/bolt-strike-blue.webp", { value: 2, unit: "rounds", expiry: "turn-end", sustained: false }, [
         { key: "FlatModifier", selector: "ac", type: "circumstance", value: -2, label: "Shocked", predicate: ["origin:item:trait:electricity"] },
         { key: "FlatModifier", selector: "saving-throw", type: "circumstance", value: -2, label: "Shocked", predicate: ["item:trait:electricity"] }

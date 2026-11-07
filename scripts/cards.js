@@ -14,7 +14,7 @@ const CARD = "card";
 export const CONDUCTED = "elements:conducted";
 const DEGREES = { criticalSuccess: "Critical success", success: "Success", failure: "Failure", criticalFailure: "Critical failure", automatic: "Also" };
 const STATISTICS = { reflex: "Reflex", acrobatics: "Acrobatics" };
-const CONDITION_WORDS = { immobilized: "immobilized", icebound: "stuck in the ice, immobilized until it Escapes", prone: "prone", shocked: "shocked" };
+const CONDITION_WORDS = { maddened: "confused until the end of its next turn", dazzled: "dazzled", immobilized: "immobilized", icebound: "stuck in the ice, immobilized until it Escapes", prone: "prone", shocked: "shocked" };
 
 export const cardOf = (message) => message?.flags?.[MODULE_ID]?.[CARD] ?? null;
 const identifierOf = (messageId, targetId) => `${MODULE_ID}:${messageId}:${targetId}`;
@@ -38,7 +38,7 @@ const groundLine = (state) => {
 };
 
 const degreeWords = (state) => Object.entries(state.degrees ?? {}).flatMap(([degree, row]) => {
-    const words = [row.condition && (CONDITION_WORDS[row.condition] ?? row.condition), row.persistent && `${row.persistent} persistent ${state.element}`, row.stack && `${row.stack.key} ${row.stack.by}`, row.returnTo && "back where it started"].filter(Boolean).join(", ");
+    const words = [row.condition && (CONDITION_WORDS[row.condition] ?? row.condition), row.persistent && `${row.persistent} persistent ${state.element}`, row.stack && `${row.stack.key} ${row.stack.by}`, row.returnTo && "back where it started", row.push && `pushed ${row.push.feet} feet`].filter(Boolean).join(", ");
     return words ? [`${DEGREES[degree]}: ${words}.`] : [];
 });
 
@@ -214,11 +214,16 @@ export async function releaseFromIce(scene) {
 }
 
 // Ice: the rest of a forced move, away from where it began.
+// (A way to go, dx and dy, for the wind: away from the square behind it.)
 async function slide(token, push) {
     const forcedMove = coreForcedMove();
     if (!forcedMove) return;
     noteSlide(token);
-    await forcedMove(token, { point: push.from, direction: "away", feet: push.feet, reason: "Ice" });
+    const size = token.parent.grid.size;
+    const half = (token.width * size) / 2;
+    const stored = token._source ?? token;
+    const point = push.dx === undefined ? push.from : { x: stored.x + half - push.dx * size, y: stored.y + half - push.dy * size };
+    await forcedMove(token, { point, direction: "away", feet: push.feet, reason: push.reason ?? "Ice" });
 }
 
 // The GM's Apply: damage by each degree, conditions, states, then the ground. Creatures yet to roll stay for another press.
@@ -250,6 +255,7 @@ export async function applyCard(message) {
                 if (row.stack.key === "frozen") await postThaw(token);
             }
             // (Back where the move began: its stored place, and no second card for moving.)
+            if (row.push) await slide(token, row.push);
             if (row.returnTo) await token.update(row.returnTo, { teleport: true, animate: false, [MODULE_ID]: { forced: true } });
             for (const key of state.add ?? []) await setState(actor, key, true);
             for (const key of state.remove ?? []) await setState(actor, key, false);

@@ -5,15 +5,20 @@
 import { beatenBy } from "./matchups.js";
 
 export const NEUTRAL = "neutral";
-export const FIELD_ELEMENTS = ["fire", "cold", "electricity", "water", "air", "earth", "wood", "metal", "poison", "acid", "sonic", "light", "darkness", "void", "vitality", NEUTRAL];
+export const FIELD_ELEMENTS = ["fire", "cold", "electricity", "water", "air", "earth", "wood", "metal", "poison", "acid", "sonic", "light", "darkness", "void", "vitality", "holy", NEUTRAL];
 // (PF2e has a weakness and resistance type for all of these but darkness.)
-const HAS_TYPE = new Set(FIELD_ELEMENTS.filter((element) => element !== "darkness" && element !== NEUTRAL));
+const HAS_TYPE = new Set(FIELD_ELEMENTS.filter((element) => !["darkness", "holy", NEUTRAL].includes(element)));
 const SCALED = "max(1,floor(@actor.level/2))";
 
 export const fieldLabel = (element) => `${element[0].toUpperCase()}${element.slice(1)} field`;
 
 export function fieldEffect(element) {
     const name = fieldLabel(element);
+    // (A holy day's: a light field, and everyone heals.)
+    if (element === "holy") {
+        const light = fieldEffect("light");
+        return { name, rules: [...light.rules, { key: "FastHealing", value: SCALED }], description: `${light.description.replace("Inside a light field", "Inside a holy field").replace(" Homebrew.", "")}, and fast healing of half its level (at least 1). Homebrew.` };
+    }
     if (element === NEUTRAL) return { name, rules: [{ key: "Note", selector: "ac", title: name, text: "Weaknesses and resistances don't count here." }], description: "Inside a neutral field: no weaknesses or resistances. Immunities still count. Homebrew." };
     const weakTo = beatenBy(element).filter((other) => HAS_TYPE.has(other));
     return {
