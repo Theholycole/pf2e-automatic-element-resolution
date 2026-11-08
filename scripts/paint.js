@@ -16,6 +16,9 @@ import { FIELD_ELEMENTS, fieldEffect, fieldLabel } from "../src/fields.js";
 let picked = undefined;
 let stroke = null;
 let lasting = false;
+// (Fill: a drag paints the rectangle between where it began and where it ends, not just the squares it crosses.)
+let fill = false;
+let preview = null;
 let dialog = null;
 let objectLevel = 1;
 
@@ -27,11 +30,42 @@ function onDown(event) {
     const { x, y } = pointOf(event);
     const key = squareAt(canvas.scene, x, y);
     if (picked?.object) return placeObject(canvas.scene, picked.object, x, y, objectLevel);
-    stroke = { keys: new Set([key]), clearing: Boolean(picked) && !picked.field && surfacesOf(canvas.scene).some((surface) => surface.material === picked && surface.squares.includes(key)), last: { x, y } };
+    stroke = { keys: new Set([key]), clearing: Boolean(picked) && !picked.field && surfacesOf(canvas.scene).some((surface) => surface.material === picked && surface.squares.includes(key)), last: { x, y }, start: key, end: key };
+    if (fill) drawPreview();
+}
+
+// The rectangle's squares, corner to corner.
+function rectangleSquares(start, end) {
+    const [a, b] = [start, end].map((key) => key.split(",").map(Number));
+    const keys = [];
+    for (let column = Math.min(a[0], b[0]); column <= Math.max(a[0], b[0]); column++) for (let row = Math.min(a[1], b[1]); row <= Math.max(a[1], b[1]); row++) keys.push(`${column},${row}`);
+    return keys;
+}
+
+// An outline of what the drag will fill, until it lets go.
+function drawPreview() {
+    if (!stroke) return clearPreview();
+    preview ??= canvas.controls.addChild(new PIXI.Graphics());
+    const size = canvas.scene.grid.size;
+    const [a, b] = [stroke.start, stroke.end].map((key) => key.split(",").map(Number));
+    const color = picked && typeof picked === "string" ? Number(`0x${SURFACES[picked]?.color?.slice(1) ?? "ffffff"}`) : 0xffffff;
+    preview.clear().lineStyle(3, color, 0.9).beginFill(color, 0.2).drawRect(Math.min(a[0], b[0]) * size, Math.min(a[1], b[1]) * size, (Math.abs(a[0] - b[0]) + 1) * size, (Math.abs(a[1] - b[1]) + 1) * size).endFill();
+}
+function clearPreview() {
+    preview?.destroy();
+    preview = null;
 }
 function onMove(event) {
     if (!stroke) return;
     const { x, y } = pointOf(event);
+    if (fill) {
+        const key = squareAt(canvas.scene, x, y);
+        if (key !== stroke.end) {
+            stroke.end = key;
+            drawPreview();
+        }
+        return;
+    }
     // (A fast drag's events skip squares: fill in the line from the last one.)
     const from = stroke.last ?? { x, y };
     const steps = Math.ceil(Math.hypot(x - from.x, y - from.y) / (canvas.scene.grid.size / 2)) || 1;
@@ -40,8 +74,10 @@ function onMove(event) {
 }
 async function onUp() {
     if (!stroke) return;
-    const { keys, clearing } = stroke;
+    const { clearing } = stroke;
+    const keys = fill ? new Set(rectangleSquares(stroke.start, stroke.end)) : stroke.keys;
     stroke = null;
+    clearPreview();
     if (picked && typeof picked === "object" && "field" in picked) return paintField(canvas.scene, [...keys], picked.field);
     await paintSquares(canvas.scene, [...keys], clearing ? null : picked, { lasting });
     if (picked === "oil" && !clearing) await onOilPainted(canvas.scene, [...keys]);
@@ -79,10 +115,10 @@ function windowHTML() {
     const cycle = cycleOf(scene);
     return `<div class="pf2e-elements-paint">
         <nav class="pf2e-elements-tabs"><button type="button" data-tab="surfaces" class="active">Surfaces</button><button type="button" data-tab="objects">Objects</button><button type="button" data-tab="weather">Weather</button><button type="button" data-tab="fields">Fields</button><button type="button" data-tab="items">Items</button></nav>
-        <section data-section="surfaces"><div class="pf2e-elements-grid">${surfaces}<button type="button" data-pick="surface" data-value="" ${tooltip({ title: "Erase", lines: ["Clears the surface from the squares you click or drag over."] })}>Erase</button></div><label><input type="checkbox" data-lasting ${lasting ? "checked" : ""}> Stays until something changes it</label><p>Click or drag on the scene. Painting a square with the same material clears it.</p></section>
+        <section data-section="surfaces"><div class="pf2e-elements-grid">${surfaces}<button type="button" data-pick="surface" data-value="" ${tooltip({ title: "Erase", lines: ["Clears the surface from the squares you click or drag over."] })}>Erase</button></div><label ${tooltip({ title: "Fill an area", lines: ["Drag from one corner to the other to fill the rectangle between them. Off: a drag paints only the squares it crosses."] })}><input type="checkbox" data-fill ${fill ? "checked" : ""}> Fill an area</label><label><input type="checkbox" data-lasting ${lasting ? "checked" : ""}> Stays until something changes it</label><p>Click or drag on the scene. Painting a square with the same material clears it.</p></section>
         <section data-section="objects" hidden><label ${tooltip({ title: "Level", lines: ["Sets a placed object's burst damage and save DC. It starts at your party's level."] })}>Level <input type="number" min="1" max="20" data-object-level value="${objectLevel}"></label><div class="pf2e-elements-grid">${objects}</div><p>Click on the scene to place one. Each bursts when destroyed or when the right element reaches it.</p></section>
         <section data-section="weather" hidden><label ${tooltip({ title: "Elemental weather", lines: ["Each kind is described under the menu once it's picked."] })}>Elemental weather <select data-storm><option value="">None</option>${storms}</select></label><p class="pf2e-elements-note" data-storm-info></p><label>Strikes each round <input type="number" min="1" max="20" data-count value="${stormOf(scene)?.count ?? 2}"></label><p>Each new round, marked squares under the sky are hit, and new ones are marked for the next.</p><label ${tooltip({ title: "Starting ground", lines: ["Scatters surfaces over the bare squares right away, for the fight about to start. Each click adds more."] })}>Starting ground <select data-scatter>${Object.entries(STARTING_GROUND).map(([key, entry]) => `<option value="${key}">${entry.label}</option>`).join("")}</select></label><button type="button" data-scatter-go>Scatter it</button></section>
-        <section data-section="fields" hidden><label ${tooltip({ title: "Whole scene", lines: ["Puts a field over the entire scene. A marked field takes over inside its own squares."] })}>Whole scene <select data-scene-field><option value="">None</option>${whole}</select></label><p class="pf2e-elements-note" data-field-info></p><div class="pf2e-elements-grid">${fields}<button type="button" data-pick="field" data-value="" ${tooltip({ title: "Erase field", lines: ["Clears a marked field from the squares you click or drag over."] })}>Erase field</button></div><p>Or pick one and paint a marked area, which takes over from the whole-scene field inside it. A square holds one field. Inside, that element hits harder and hurts less, and what beats it hurts more.</p><label>Cycle through (elements, commas) <input type="text" data-cycle value="${cycle?.elements?.join(", ") ?? ""}"></label><label>Every (rounds) <input type="number" min="1" data-every value="${cycle?.every ?? 2}"></label></section>
+        <section data-section="fields" hidden><label ${tooltip({ title: "Whole scene", lines: ["Puts a field over the entire scene. A marked field takes over inside its own squares."] })}>Whole scene <select data-scene-field><option value="">None</option>${whole}</select></label><p class="pf2e-elements-note" data-field-info></p><div class="pf2e-elements-grid">${fields}<button type="button" data-pick="field" data-value="" ${tooltip({ title: "Erase field", lines: ["Clears a marked field from the squares you click or drag over."] })}>Erase field</button></div><label ${tooltip({ title: "Fill an area", lines: ["Drag from one corner to the other to fill the rectangle between them. Off: a drag paints only the squares it crosses."] })}><input type="checkbox" data-fill ${fill ? "checked" : ""}> Fill an area</label><p>Or pick one and paint a marked area, which takes over from the whole-scene field inside it. A square holds one field. Inside, that element hits harder and hurts less, and what beats it hurts more.</p><label>Cycle through (elements, commas) <input type="text" data-cycle value="${cycle?.elements?.join(", ") ?? ""}"></label><label>Every (rounds) <input type="number" min="1" data-every value="${cycle?.every ?? 2}"></label></section>
         <section data-section="items" hidden><p>Makes flasks for each surface, Sowing Seeds and a Harvest Charm in a world folder, to hand out or put on your own characters.</p><button type="button" data-items>Make the items</button></section>
     </div>`;
 }
@@ -99,6 +135,9 @@ export function openPaint() {
     dialog.addEventListener("close", () => {
         dialog = null;
         lasting = false;
+        fill = false;
+        stroke = null;
+        clearPreview();
         pick(undefined);
     });
     dialog.render({ force: true }).then(() => {
@@ -110,6 +149,11 @@ export function openPaint() {
             pick(undefined);
         }));
         root.querySelector("[data-lasting]").addEventListener("change", (event) => { lasting = event.target.checked; });
+        // (One choice for surfaces and fields: both boxes show it.)
+        root.querySelectorAll("[data-fill]").forEach((box) => box.addEventListener("change", (event) => {
+            fill = event.target.checked;
+            root.querySelectorAll("[data-fill]").forEach((other) => { other.checked = fill; });
+        }));
         root.querySelectorAll("[data-pick]").forEach((button) => button.addEventListener("click", () => {
             root.querySelectorAll("[data-pick]").forEach((other) => other.classList.toggle("active", other === button));
             const { pick: kind, value } = button.dataset;
