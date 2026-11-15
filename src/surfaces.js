@@ -3,7 +3,7 @@
 
 export const SURFACES = {
     water: { label: "Water", color: "#3f7fd6", conducts: true },
-    metal: { label: "Metal floor", color: "#8a8f98", conducts: true, manMade: true },
+    metal: { label: "Metal floor", color: "#8a8f98", conducts: true, manMade: true, floor: true },
     oil: { label: "Oil", color: "#4a3b22", flammable: true },
     plants: { label: "Plants", color: "#4f8a3a", flammable: true },
     thicket: { label: "Thicket", color: "#2f6b2a", flammable: true },
@@ -32,9 +32,9 @@ export const SURFACES = {
     dust: { label: "Dust cloud", color: "#b5a58a", cloud: true, drifts: true },
     twister: { label: "Twister", color: "#a9bcc8", cloud: true, drifts: true },
     // Man-made: the map's art shows what it is, so players don't see these unless the GM wants them to. catches: its own flat check for fire to spread to it.
-    woodfloor: { label: "Wood floor", color: "#a0713f", flammable: true, manMade: true },
+    woodfloor: { label: "Wood floor", color: "#a0713f", flammable: true, manMade: true, floor: true },
     straw: { label: "Straw", color: "#d9c15a", flammable: true, catches: 6, manMade: true },
-    stone: { label: "Stone or brick floor", color: "#9a948a", manMade: true },
+    stone: { label: "Stone or brick floor", color: "#9a948a", manMade: true, floor: true },
     sewage: { label: "Sewage", color: "#5f6b35", conducts: true, manMade: true },
     coals: { label: "Forge coals", color: "#b8491f", manMade: true },
     woodfurniture: { label: "Wood furniture", color: "#7d5430", flammable: true, manMade: true },
@@ -90,6 +90,10 @@ export const movedSquares = (keys, dx, dy) => keys.map((key) => {
     const [column, row] = squareOf(key);
     return squareKey(column + dx, row + dy);
 });
+
+// A floor is its own layer: water can lie on a wood floor. Everything else shares the layer above it.
+export const layerOf = (material) => (SURFACES[material]?.floor ? "floor" : "top");
+export const onTop = (surfaces) => surfaces.filter((surface) => layerOf(surface.material) === "top");
 
 export const squareKey = (column, row) => `${column},${row}`;
 export const squareOf = (key) => key.split(",").map(Number);

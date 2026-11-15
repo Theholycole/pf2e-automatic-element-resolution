@@ -2,7 +2,7 @@
 // move puts back the squares it changed and takes back its cards that haven't been applied. What the GM already applied stays. The record of
 // moves lives only until the page reloads.
 
-import { MODULE_ID, creatureOf, creaturesOf, dcFrom, hazardFormula, isActiveGM, isCreatureActor, paintSquares, sceneDC, surfaceDC, surfacesOf } from "./foundry.js";
+import { MODULE_ID, creatureOf, creaturesOf, dcFrom, floorOf, hazardFormula, isActiveGM, isCreatureActor, levelOf, paintSquares, sceneDC, surfaceDC, surfacesOf } from "./foundry.js";
 import { cardOf, postPlan, stackState } from "./cards.js";
 import { squareKey } from "../src/surfaces.js";
 import { bestStatistic, ignoredOf, immuneTo } from "./terrain.js";
@@ -40,7 +40,7 @@ async function undoMove(token) {
     if (!entry) return;
     const scene = token.parent;
     if (entry.oil) await stackState(token.actor, "oil", -entry.oil).catch(() => null);
-    for (const { material, keys } of entry.before.slice().reverse()) await paintSquares(scene, keys, material);
+    for (const { material, keys, level, to } of entry.before.slice().reverse()) await paintSquares(scene, keys, material, { level, from: to });
     // (A little before: the region's events for a move can arrive ahead of the move's own hook.)
     const unapplied = game.messages.contents.slice(-30).filter((message) => {
         const state = cardOf(message);
@@ -52,7 +52,8 @@ async function undoMove(token) {
 async function touchGround(token, contact, entry = null, options = {}) {
     const scene = token.parent;
     if (!contact.length) return;
-    const surfaces = surfacesOf(scene);
+    const level = levelOf(scene, token);
+    const surfaces = surfacesOf(scene, level);
     if (!surfaces.length) return;
     const entering = options.entering ?? contact;
     // (Oil clings: a stack for each move through it, or turn begun in it.)
@@ -61,16 +62,16 @@ async function touchGround(token, contact, entry = null, options = {}) {
         if (entry) entry.oil = 1;
     }
     const weakness = weaknessPlan({ creature: creatureOf(token), weaknesses: token.actor.attributes?.weaknesses ?? [], contact: entering, surfaces, perSquare: Boolean(entry) });
-    if (weakness) await postPlan(weakness, scene, entry ? { fromMove: token.id } : {});
+    if (weakness) await postPlan(weakness, scene, { level, ...(entry ? { fromMove: token.id } : {}) });
     const elements = elementsOf(token.actor);
     if (!elements.length) return;
-    const plans = trailPlans({ creature: creatureOf(token), elements, contact, surfaces, creatures: creaturesOf(scene), dc: dcFrom(token.actor, null) ?? sceneDC(scene), hazardFormula: hazardFormula(scene) });
+    const plans = trailPlans({ creature: creatureOf(token), elements, contact, surfaces, creatures: creaturesOf(scene, level), dc: dcFrom(token.actor, null) ?? sceneDC(scene), hazardFormula: hazardFormula(scene) });
     const ask = game.settings.get(MODULE_ID, "askTrails");
     for (const plan of plans) {
-        if (needsCard(plan, ask)) await postPlan(plan, scene, entry ? { fromMove: token.id } : {});
+        if (needsCard(plan, ask)) await postPlan(plan, scene, { level, ...(entry ? { fromMove: token.id } : {}) });
         else {
-            entry?.before.push({ material: plan.material, keys: plan.squares });
-            await paintSquares(scene, plan.squares, plan.to);
+            entry?.before.push({ material: plan.material, keys: plan.squares, level, to: plan.to });
+            await paintSquares(scene, plan.squares, plan.to, { level, from: plan.material });
         }
     }
 }
@@ -83,16 +84,17 @@ async function enterGround(token, movement, inAir, onGround) {
     if (subpaths.size > 100) subpaths.delete(subpaths.keys().next().value);
     const seen = subpaths.get(subpath);
     const forced = (movement.passed?.waypoints ?? []).every((point) => point.action === "displace");
-    for (const surface of surfacesOf(scene).filter((each) => !each.environment)) {
+    const level = levelOf(scene, token);
+    for (const surface of surfacesOf(scene, level).filter((each) => !each.environment)) {
         const entered = (SURFACES[surface.material]?.cloud ? inAir : onGround).filter((key) => surface.squares.includes(key) && !seen.paid.has(`${surface.material}:${key}`));
         if (!entered.length) continue;
         entered.forEach((key) => seen.paid.add(`${surface.material}:${key}`));
         const rules = terrainRules(surface.material, { dc: surfaceDC(token.actor) });
         if (rules.balance && !forced && !seen.balanced.has(surface.material) && !steady(rules, ignoredOf(token.actor))) {
             seen.balanced.add(surface.material);
-            await postPlan(balancePlan(rules, token, bestStatistic(token.actor, rules.balance.statistics), seen.origin), scene, { fromMove: token.id });
+            await postPlan(balancePlan(rules, token, bestStatistic(token.actor, rules.balance.statistics), seen.origin), scene, { fromMove: token.id, level });
         }
-        if (rules.hazard && !immuneTo(token.actor, rules.hazard.type)) await postPlan(hazardPlan(rules, token, entered.length), scene, { fromMove: token.id });
+        if (rules.hazard && !immuneTo(token.actor, rules.hazard.type)) await postPlan(hazardPlan(rules, token, entered.length), scene, { fromMove: token.id, level });
     }
 }
 
@@ -106,7 +108,7 @@ async function slideOnIce(token, movement, entry) {
     if (!forced && !outOfTurn) return;
     const size = scene.grid.size;
     const start = squareKey(Math.floor(movement.origin.x / size + 0.001), Math.floor(movement.origin.y / size + 0.001));
-    if (!surfacesOf(scene).some((surface) => surface.material === "ice" && surface.squares.includes(start))) return;
+    if (!surfacesOf(scene, levelOf(scene, token)).some((surface) => surface.material === "ice" && surface.squares.includes(start))) return;
     const destination = movement.destination ?? movement.origin;
     const feet = Math.round(Math.hypot(destination.x - movement.origin.x, destination.y - movement.origin.y) / size) * (scene.grid.distance || 5);
     if (feet <= 0) return;
@@ -120,7 +122,9 @@ export async function onTokenMoved(token, movement) {
     if (movement?.method === "undo") return undoMove(token);
     const entry = recordMove(token);
     await slideOnIce(token, movement, entry);
-    const points = [movement?.origin, ...(movement?.passed?.waypoints ?? [])].filter(Boolean).map((point) => ({ width: token.width, height: token.height, ...point }));
+    // (Heights from the token's own floor, on a level.)
+    const floor = floorOf(token.parent, levelOf(token.parent, token));
+    const points = [movement?.origin, ...(movement?.passed?.waypoints ?? [])].filter(Boolean).map((point) => ({ width: token.width, height: token.height, ...point, elevation: (point.elevation ?? 0) - floor }));
     if (!points.length) return;
     const size = token.parent.grid.size;
     const path = pathSquares(points, size);
@@ -137,7 +141,7 @@ export async function healingGroundTurn(combat, change, options) {
     const actor = token?.actor;
     if (!token?.parent || !isCreatureActor(actor) || actor.traits?.has?.("undead") || (actor.hitPoints?.value ?? 0) >= (actor.hitPoints?.max ?? 0)) return;
     const creature = creatureOf(token);
-    const under = (creature.elevation ?? 0) > 0 ? [] : surfacesOf(token.parent).filter((surface) => surface.squares.some((key) => creature.squares.includes(key)));
+    const under = (creature.elevation ?? 0) > 0 ? [] : surfacesOf(token.parent, levelOf(token.parent, token)).filter((surface) => surface.squares.some((key) => creature.squares.includes(key)));
     // (A holy field reaches those in the air too, and counts like flowers. The most of them, not all.)
     const holy = actor.itemTypes.effect.some((effect) => /^elements-(surface-)?field-holy$/.test(effect.slug ?? ""));
     const amount = Math.max(0, ...under.map((surface) => groundHealing(surface.material, actor.level)), holy ? groundHealing("flowers", actor.level) : 0);

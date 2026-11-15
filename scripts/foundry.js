@@ -1,7 +1,7 @@
 // Foundry and PF2e glue: the module's id and settings, the scene's surfaces as the rules see them, a creature as the rules see it, and
 // where a DC comes from. A surface is a region flagged with its material, one region per material; its shapes are grid squares.
 
-import { SURFACES, squareKey, squareOf } from "../src/surfaces.js";
+import { SURFACES, layerOf, squareKey, squareOf } from "../src/surfaces.js";
 import { levelDC } from "../src/reactions.js";
 import { applyTerrain, syncInside } from "./terrain.js";
 import { cutEnvironment, environmentSurfaces } from "./environment.js";
@@ -50,7 +50,29 @@ export const squareAt = squareOfPoint;
 
 // The flagged region of a material, in the scene.
 export const surfaceRegions = (scene) => [...(scene?.regions ?? [])].filter((region) => SURFACES[region.flags?.[MODULE_ID]?.[SURFACE]]);
-const regionOf = (scene, material) => surfaceRegions(scene).find((region) => region.flags[MODULE_ID][SURFACE] === material);
+
+// Levels (Foundry 14): a scene can have floors, each with its own surfaces. A region in no level belongs to all of them (one painted before this, or
+// on a scene of one floor). The level something is on: a token's own, else the one being viewed, else the scene's first.
+export const hasLevels = (scene) => (scene?.levels?.size ?? 0) > 1;
+export const levelOf = (scene, token = null) => {
+    if (!hasLevels(scene)) return null;
+    const own = (token?.document ?? token)?.level;
+    if (own && scene.levels.has(own)) return own;
+    if (globalThis.canvas?.scene === scene && canvas.level?.id) return canvas.level.id;
+    return scene.initialLevel?.id ?? scene.levels.contents[0]?.id ?? null;
+};
+export const inLevel = (region, level) => !level || !region.levels?.size || region.levels.has(level);
+// (Where a level's floor is: its creatures' elevation counts from there.)
+export const floorOf = (scene, level) => (level ? Number(scene.levels.get(level)?.elevation?.bottom) || 0 : 0);
+const levelData = (scene, level) => {
+    const floor = level ? scene.levels.get(level) : null;
+    return floor ? { levels: [level], elevation: { bottom: floor.elevation.bottom, top: floor.elevation.top } } : {};
+};
+export const regionLevelData = levelData;
+// The top level: the one under the sky, where the weather falls.
+export const topLevelOf = (scene) => (hasLevels(scene) ? scene.levels.contents.reduce((top, level) => ((Number(level.elevation.bottom) || 0) > (Number(top.elevation.bottom) || 0) ? level : top)).id : null);
+// A material's own region on this level (an old one in no level only where the scene has one floor).
+const regionOf = (scene, material, level) => surfaceRegions(scene).find((region) => region.flags[MODULE_ID][SURFACE] === material && (level ? region.levels?.has(level) : true));
 
 // The party's level, as far as the scene's player characters say, then the world's.
 export function partyLevel(scene) {
@@ -82,11 +104,11 @@ export const ruleSquaresOf = (region) => squaresOfRegion(region);
 
 // The scene's surfaces: [{ id, material, squares, ages: { key: rounds }, lasting: [keys] }]. (Ages are stored as pairs: an object's keys would merge
 // on update and never leave.)
-const ownSurfaces = (scene) => surfaceRegions(scene).map((region) => ({ id: region.id, material: region.flags[MODULE_ID][SURFACE], squares: squaresOfRegion(region), ages: Object.fromEntries(region.flags[MODULE_ID].ages ?? []), lasting: region.flags[MODULE_ID].lasting ?? [] }));
-// (With the environment module's terrain, under what's painted on it.)
-export const surfacesOf = (scene) => {
-    const own = ownSurfaces(scene);
-    return [...own, ...environmentSurfaces(scene, new Set(own.flatMap((surface) => surface.squares)))];
+const ownSurfaces = (scene, level) => surfaceRegions(scene).filter((region) => inLevel(region, level)).map((region) => ({ id: region.id, material: region.flags[MODULE_ID][SURFACE], squares: squaresOfRegion(region), ages: Object.fromEntries(region.flags[MODULE_ID].ages ?? []), lasting: region.flags[MODULE_ID].lasting ?? [], level: region.levels?.first?.() ?? [...(region.levels ?? [])][0] ?? null }));
+// (With the environment module's terrain, under what's painted on it.) level: whose surfaces; by default, as levelOf says.
+export const surfacesOf = (scene, level = levelOf(scene)) => {
+    const own = ownSurfaces(scene, level);
+    return [...own, ...environmentSurfaces(scene, new Set(own.flatMap((surface) => surface.squares)), level)];
 };
 
 const shapeOf = (scene, key) => {
@@ -98,9 +120,9 @@ const shapeOf = (scene, key) => {
 // Who sees a surface. Man-made ones show on the map's art, so they're the GM's unless the world says otherwise.
 export const surfaceVisibility = (material) => (SURFACES[material]?.manMade && !game.settings.get(MODULE_ID, "showManMade") ? CONST.REGION_VISIBILITY.GAMEMASTER : CONST.REGION_VISIBILITY.ALWAYS);
 
-// Set a material's squares (none: its region goes). Each square keeps its age and whether it lasts, while it's there.
-async function writeSquares(scene, material, squares, { ages = {}, lasting = [] } = {}) {
-    const region = regionOf(scene, material);
+// Set a material's squares (none: its region goes). Each square keeps its age and whether it lasts, while it's there. region: the one to write
+// (by default, the material's own on this level).
+async function writeSquares(scene, material, squares, { ages = {}, lasting = [] } = {}, level = null, region = regionOf(scene, material, level)) {
     const kept = [...new Set(squares)];
     const shapes = kept.map((key) => shapeOf(scene, key));
     if (!shapes.length) return region?.delete();
@@ -109,34 +131,41 @@ async function writeSquares(scene, material, squares, { ages = {}, lasting = [] 
         await region.update({ shapes, [`flags.${MODULE_ID}.ages`]: timing.ages, [`flags.${MODULE_ID}.lasting`]: timing.lasting });
         return syncInside(region);
     }
-    const [created] = await scene.createEmbeddedDocuments("Region", [{ name: `Surface: ${SURFACES[material].label}`, color: SURFACES[material].color, shapes, visibility: surfaceVisibility(material), flags: { [MODULE_ID]: { [SURFACE]: material, ...timing } } }]);
+    const [created] = await scene.createEmbeddedDocuments("Region", [{ name: `Surface: ${SURFACES[material].label}`, color: SURFACES[material].color, shapes, visibility: surfaceVisibility(material), ...levelData(scene, level), flags: { [MODULE_ID]: { [SURFACE]: material, ...timing } } }]);
     await applyTerrain(created);
     return created;
 }
 
-// These squares become this material (null: bare ground), whatever they were, and start their time afresh. lasting: they never run out.
-export async function paintSquares(scene, keys, material, { lasting = false } = {}) {
+// These squares become this material (null: bare ground), and start their time afresh. lasting: they never run out. level: the floor they're on
+// (by default, as levelOf says). A floor (wood, stone, metal) is a layer of its own: painting replaces only what's on the same layer, so water
+// can lie on a wood floor. from: what a reaction changed, which goes too (fire on a wood floor: the floor burns away). No material: erase from,
+// or with no from, everything there.
+export async function paintSquares(scene, keys, material, { lasting = false, level = levelOf(scene), from = null } = {}) {
     const painted = new Set(keys);
-    await cutEnvironment(scene, painted);
-    for (const surface of ownSurfaces(scene)) {
-        if (surface.material === material) continue;
+    const layer = material ? layerOf(material) : null;
+    const goes = (other) => other === from || (material ? layerOf(other) === layer : !from);
+    // (The environment module's terrain is on the top layer.)
+    if (material ? layer === "top" : !from || layerOf(from) === "top") await cutEnvironment(scene, painted, level);
+    for (const surface of ownSurfaces(scene, level)) {
+        if (surface.material === material && (!level || surface.level === level)) continue;
+        if (!goes(surface.material)) continue;
         const left = surface.squares.filter((key) => !painted.has(key));
-        if (left.length !== surface.squares.length) await writeSquares(scene, surface.material, left, surface);
+        if (left.length !== surface.squares.length) await writeSquares(scene, surface.material, left, surface, level, scene.regions.get(surface.id));
     }
     if (!material) return;
-    const here = ownSurfaces(scene).find((surface) => surface.material === material);
+    const here = ownSurfaces(scene, level).find((surface) => surface.material === material && (!level || surface.level === level));
     const ages = Object.fromEntries(Object.entries(here?.ages ?? {}).filter(([key]) => !painted.has(key)));
     const stays = (here?.lasting ?? []).filter((key) => !painted.has(key));
-    await writeSquares(scene, material, [...(here?.squares ?? []), ...keys], { ages, lasting: lasting ? [...stays, ...keys] : stays });
+    await writeSquares(scene, material, [...(here?.squares ?? []), ...keys], { ages, lasting: lasting ? [...stays, ...keys] : stays }, level);
 }
 
 // Those a move or a paint has just covered in oil pick up a stack.
 export const coreForcedMove = () => game.modules.get("pf2e-resolution-core")?.api?.forcedMovement?.forcedMove ?? null;
 
-// A round's new ages, on each material: { material: { key: rounds } }.
+// A round's new ages, on each surface's region: { region id: { key: rounds } }.
 export async function writeAges(scene, ages) {
     for (const region of surfaceRegions(scene)) {
-        const grown = ages[region.flags[MODULE_ID][SURFACE]];
+        const grown = ages[region.id];
         if (grown) await region.update({ [`flags.${MODULE_ID}.ages`]: Object.entries(grown) });
     }
 }
@@ -156,6 +185,8 @@ export function creatureOf(token) {
     const squares = [];
     // (Its stored place: Foundry 14's prepared x, y and elevation can lag behind while the token animates.)
     const stored = document._source ?? document;
+    // (On a level, its height above that floor.)
+    const floor = floorOf(document.parent, levelOf(document.parent, document));
     const left = Math.floor(stored.x / size + 0.001), upper = Math.floor(stored.y / size + 0.001);
     for (let dx = 0; dx < width; dx++) for (let dy = 0; dy < height; dy++) squares.push(squareKey(left + dx, upper + dy));
     const actor = document.actor;
@@ -163,7 +194,7 @@ export function creatureOf(token) {
         id: document.id,
         name: document.name,
         squares,
-        elevation: stored.elevation ?? 0,
+        elevation: (stored.elevation ?? 0) - floor,
         metalArmor: METAL_GROUPS.has(actor?.wornArmor?.group),
         wet: Boolean(stateOf(actor, WET_SLUG)),
         limned: limnedOf(actor),
@@ -176,7 +207,8 @@ export function creatureOf(token) {
 export const sceneDC = (scene) => surfaceDC({ level: Math.max(0, ...[...scene.tokens].filter((token) => isCreatureActor(token.actor) && !token.actor.flags?.[MODULE_ID]?.object).map((token) => token.actor.level ?? 0)) });
 
 export const isCreatureActor = (actor) => Boolean(actor?.isOfType?.("creature"));
-export const creaturesOf = (scene) => [...scene.tokens].filter((token) => token.actor?.isOfType?.("creature")).map(creatureOf);
+// level: only those on it (on a scene with levels).
+export const creaturesOf = (scene, level = null) => [...scene.tokens].filter((token) => token.actor?.isOfType?.("creature") && (!level || levelOf(scene, token) === level)).map(creatureOf);
 
 // The source's DC: its spell's, then its class's, then GM Core's for its level.
 export function dcFrom(actor, item) {

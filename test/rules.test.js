@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { bodyFrom, openSquares, squareKey, touches, nextTo } from "../src/surfaces.js";
+import { bodyFrom, layerOf, nextTo, openSquares, squareKey, touches } from "../src/surfaces.js";
 import { OBJECTS, burstFormula, burstPlan, goesOff, objectInfo, objectsOf, setOff } from "../src/objects.js";
 import { STARTING_GROUND, STORMS, madnessPlan, pickWarnings, scatterPlan, stormInfo, strikePlan, swarmPlan, windPlan } from "../src/storms.js";
 import { fieldEffect, nextField } from "../src/fields.js";
@@ -638,4 +638,16 @@ test("next to: touching squares, diagonals included", () => {
     assert.equal(nextTo(["5,5"], ["6,6"]), true);
     assert.equal(nextTo(["5,5"], ["5,7"]), false);
     assert.equal(nextTo(["5,5", "6,5"], ["7,5"]), true);
+});
+
+test("floors: their own layer, covered by what lies on them", () => {
+    assert.equal(layerOf("woodfloor"), "floor");
+    assert.equal(layerOf("water"), "top");
+    const floor = { id: "f", material: "woodfloor", squares: ["0,0", "1,0"] };
+    const water = { id: "w", material: "water", squares: ["0,0"] };
+    const fire = (contact, surfaces) => surfacePlans({ elements: [{ element: "fire", amount: 5 }], contact, surfaces, creatures: [], dc: 20 }).map((plan) => [plan.key, plan.squares]);
+    assert.deepEqual(fire(["0,0"], [floor, water]), [["boil", ["0,0"]]], "the water boils; the floor under it doesn't burn");
+    assert.deepEqual(fire(["1,0"], [floor, water]), [["ignite-plants", ["1,0"]]]);
+    assert.deepEqual(fire(["0,0"], [floor, { id: "s", material: "steam", squares: ["0,0"] }]).map(([key]) => key), ["ignite-plants"], "a cloud covers nothing");
+    assert.deepEqual(leavePlan("Spell", "water", ["0,0", "1,0"], [floor, water]).leave, ["1,0"], "water can be left on a floor");
 });

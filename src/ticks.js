@@ -16,18 +16,18 @@ const neighbours = (key) => {
 const ENDINGS = { water: "Water dries up", steam: "Steam fades", burning: "Fire burns out" };
 
 // surfaces: [{ material, squares, ages: { key: rounds }, lasting: [keys] }]. A life of 0 never runs out, and neither does a lasting square.
-// → { ages: { material: { key: rounds } }, changes: [{ material, to, keys, words }] }
+// → { ages: { surface id (else material): { key: rounds } }, changes: [{ material, to, keys, words }] }
 // rain: wet precipitation douses flames (GM Core), true or the set of squares it falls on: those that can go out do, and none spread there.
 // It also counts as water there, and freezing as cold.
 // wind: { dx, dy }, clouds drift a square that way. freezing: a set of squares where standing water freezes. fireLasts: fires don't burn out.
 export function tickSurfaces(surfaces, { lives = DEFAULT_LIVES, spreadDC = SPREAD_DC, d20 = () => 10, rain = false, wind = null, freezing = null, fireLasts = false } = {}) {
     const ages = {};
     const changes = [];
-    for (const { material, squares, ages: before = {}, lasting = [] } of surfaces) {
+    for (const { id, material, squares, ages: before = {}, lasting = [] } of surfaces) {
         const life = fireLasts && material === "burning" ? 0 : lives[material] ?? 0;
         const stays = new Set(lasting);
         const grown = Object.fromEntries(squares.map((key) => [key, (before[key] ?? 0) + 1]));
-        ages[material] = grown;
+        ages[id ?? material] = grown;
         const ended = life > 0 ? squares.filter((key) => !stays.has(key) && grown[key] >= life) : [];
         if (ended.length) changes.push({ material, to: null, keys: ended, words: `${ENDINGS[material] ?? `${SURFACES[material]?.label ?? material} fades`} (${countOf(ended)}).` });
     }

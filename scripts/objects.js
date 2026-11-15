@@ -1,7 +1,7 @@
 // Objects on the map (src/objects.js): a PF2e hazard actor for each kind, in a world folder, with Hardness and Hit Points. Damage to one, or an area
 // of the right element, makes its card; the GM's Apply does the damage, leaves the ground, removes it, and sets off what else that reaches.
 
-import { MODULE_ID, creatureOf, creaturesOf, partyLevel } from "./foundry.js";
+import { MODULE_ID, creatureOf, creaturesOf, levelOf, partyLevel } from "./foundry.js";
 export { partyLevel };
 import { postPlan } from "./cards.js";
 import { OBJECTS, burstFormula, burstPlan, setOff } from "../src/objects.js";
@@ -49,10 +49,11 @@ export async function burstObject(token, object) {
     bursting.add(token.uuid);
     setTimeout(() => bursting.delete(token.uuid), 10000);
     const scene = token.parent;
-    const creatures = creaturesOf(scene).filter((creature) => !objectOfActor(scene.tokens.get(creature.id)?.actor));
+    const floor = levelOf(scene, token);
+    const creatures = creaturesOf(scene, floor).filter((creature) => !objectOfActor(scene.tokens.get(creature.id)?.actor));
     // (Placed before objects had levels: level 0, so the party's.)
     const level = token.actor?.level || partyLevel(scene);
-    return postPlan(burstPlan(object, token.id, creatureOf(token).squares, creatures, { dc: levelDC(level), formula: burstFormula(level) }), scene);
+    return postPlan(burstPlan(object, token.id, creatureOf(token).squares, creatures, { dc: levelDC(level), formula: burstFormula(level) }), scene, { level: floor });
 }
 
 // The GM applied it: it's gone, and what this reached that it sets off goes too.
@@ -60,7 +61,7 @@ export async function finishBurst(scene, state) {
     const { tokenId, element, squares } = state.burst;
     const token = scene.tokens.get(tokenId);
     if (token) await token.delete();
-    for (const { token: other, object } of objectsIn(scene, squares)) if (other.id !== tokenId && setOff(object, [{ element }])) await burstObject(other, object);
+    for (const { token: other, object } of objectsIn(scene, squares)) if (other.id !== tokenId && (!state.level || levelOf(scene, other) === state.level) && setOff(object, [{ element }])) await burstObject(other, object);
 }
 
 export const squareOfCanvas = (scene, x, y) => squareKey(Math.floor(x / scene.grid.size), Math.floor(y / scene.grid.size));

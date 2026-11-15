@@ -1,7 +1,7 @@
 // The environment module, when it's there: its terrain regions count as surfaces, and its rain soaks creatures and puts out fires. This only
 // reads what it stores. Where a reaction changes its ground, a hole is cut in its region, so its own rules stop there too.
 
-import { MODULE_ID, STATE_EFFECTS, WET_SLUG, creatureOf, isCreatureActor, squareAt } from "./foundry.js";
+import { MODULE_ID, STATE_EFFECTS, WET_SLUG, creatureOf, inLevel, isCreatureActor, squareAt } from "./foundry.js";
 import { environmentMaterial, openSquares, squareKey, squareOf } from "../src/surfaces.js";
 import { DIRECTIONS, WEATHER } from "../../pf2e-resolution-core/src/environment/catalog.js";
 import { normalizeState, soaked } from "../../pf2e-resolution-core/src/environment/weather.js";
@@ -16,9 +16,11 @@ function squaresOfRegion(region) {
     const size = scene.grid.size;
     const { width, height } = scene.dimensions;
     const keys = [];
+    // (On its floor, for a region on a level.)
+    const elevation = Number.isFinite(region.elevation?.bottom) ? region.elevation.bottom : 0;
     for (let x = 0; x * size < width; x++) {
         for (let y = 0; y * size < height; y++) {
-            const point = { x: (x + 0.5) * size, y: (y + 0.5) * size, elevation: 0 };
+            const point = { x: (x + 0.5) * size, y: (y + 0.5) * size, elevation };
             if (region.testPoint(point)) keys.push(squareAt(scene, point.x, point.y));
         }
     }
@@ -26,11 +28,11 @@ function squaresOfRegion(region) {
 }
 
 // Its terrain as surfaces, without the squares painted over. They don't age; those that can change are lasting until something does it.
-export function environmentSurfaces(scene, painted = new Set()) {
+export function environmentSurfaces(scene, painted = new Set(), level = null) {
     const surfaces = [];
     for (const region of scene?.regions ?? []) {
         const entry = environmentMaterial(terrainOf(region));
-        if (!entry) continue;
+        if (!entry || !inLevel(region, level)) continue;
         const squares = squaresOfRegion(region).filter((key) => !painted.has(key));
         if (squares.length) surfaces.push({ id: region.id, material: entry.material, fixed: Boolean(entry.fixed), squares, ages: {}, lasting: squares, environment: true });
     }
@@ -38,12 +40,12 @@ export function environmentSurfaces(scene, painted = new Set()) {
 }
 
 // Squares that became something else: a hole in each of its regions there (fixed ground stays under what's painted on it).
-export async function cutEnvironment(scene, keys) {
+export async function cutEnvironment(scene, keys, level = null) {
     if (!keys.size) return;
     const size = scene.grid.size;
     for (const region of scene.regions) {
         const entry = environmentMaterial(terrainOf(region));
-        if (!entry || entry.fixed) continue;
+        if (!entry || entry.fixed || !inLevel(region, level)) continue;
         const inside = squaresOfRegion(region).filter((key) => keys.has(key));
         if (!inside.length) continue;
         const holes = inside.map((key) => {

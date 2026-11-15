@@ -1,7 +1,7 @@
 // Elemental fields (src/fields.js): a scene-wide one held in a scene flag, or marked areas as regions, one to an element, that the GM paints. Fields can
 // cycle through elements every so many rounds, which makes the map worth moving around.
 
-import { MODULE_ID, creatureOf, isActiveGM, isCreatureActor } from "./foundry.js";
+import { MODULE_ID, creatureOf, inLevel, isActiveGM, isCreatureActor, levelOf, regionLevelData } from "./foundry.js";
 import { applyFieldRegion, syncInside, fieldOf } from "./terrain.js";
 import { fieldEffect, fieldLabel, nextField } from "../src/fields.js";
 import { squareKey, squareOf } from "../src/surfaces.js";
@@ -39,13 +39,15 @@ export function installNeutralFields() {
 }
 
 // Lay a field on these squares, or take them out if they're already in it. A square holds one field, so it leaves any other. No element: erase.
-export async function paintField(scene, keys, element) {
+// level: the floor (by default, the one in view); each level has its own fields.
+export async function paintField(scene, keys, element, level = levelOf(scene)) {
+    const onLevel = (region) => (level ? region.levels?.has(level) : true);
     const size = scene.grid.size;
     const shape = (key) => {
         const [column, row] = squareOf(key);
         return { type: "rectangle", x: column * size, y: row * size, width: size, height: size };
     };
-    for (const other of fieldRegions(scene).filter((each) => fieldOf(each) !== element)) {
+    for (const other of fieldRegions(scene).filter((each) => fieldOf(each) !== element && (level ? inLevel(each, level) : true))) {
         const left = squaresOfField(other).filter((key) => !keys.includes(key));
         if (left.length === squaresOfField(other).length) continue;
         if (left.length) {
@@ -54,9 +56,9 @@ export async function paintField(scene, keys, element) {
         } else await other.delete();
     }
     if (element) {
-        const region = fieldRegions(scene).find((each) => fieldOf(each) === element);
+        const region = fieldRegions(scene).find((each) => fieldOf(each) === element && onLevel(each));
         if (!region) {
-            const [created] = await scene.createEmbeddedDocuments("Region", [{ name: fieldLabel(element), color: COLOR, shapes: keys.map(shape), visibility: CONST.REGION_VISIBILITY.ALWAYS, flags: { [MODULE_ID]: { field: element } } }]);
+            const [created] = await scene.createEmbeddedDocuments("Region", [{ name: fieldLabel(element), color: COLOR, shapes: keys.map(shape), visibility: CONST.REGION_VISIBILITY.ALWAYS, ...regionLevelData(scene, level), flags: { [MODULE_ID]: { field: element } } }]);
             await applyFieldRegion(created);
         } else {
             const had = squaresOfField(region);
@@ -83,12 +85,13 @@ export async function syncSceneField(scene) {
 
 async function syncFields(scene) {
     const element = sceneFieldOf(scene)?.element ?? null;
-    const marked = fieldRegions(scene).flatMap(squaresOfField);
     for (const token of scene.tokens) {
         const actor = token.actor;
         if (!isCreatureActor(actor)) continue;
         const held = heldField(actor);
-        // (A marked field takes over from the scene's inside it: one field at a time.)
+        // (A marked field takes over from the scene's inside it, on its own level: one field at a time.)
+        const level = levelOf(scene, token);
+        const marked = fieldRegions(scene).filter((region) => inLevel(region, level)).flatMap(squaresOfField);
         const wanted = marked.some((key) => creatureOf(token).squares.includes(key)) ? null : element;
         if (held.some((effect) => effect.flags[MODULE_ID][SCENE_FIELD] === wanted)) continue;
         if (held.length) await actor.deleteEmbeddedDocuments("Item", held.map((effect) => effect.id));
@@ -121,10 +124,11 @@ export async function advanceFields(scene, round) {
     }
     for (const region of fieldRegions(scene)) {
         const element = nextField(cycle.elements, fieldOf(region));
-        if (fieldRegions(scene).some((other) => other !== region && fieldOf(other) === element)) continue;
+        const level = [...(region.levels ?? [])][0] ?? null;
+        if (fieldRegions(scene).some((other) => other !== region && fieldOf(other) === element && inLevel(other, level))) continue;
         const had = squaresOfField(region);
         await region.delete();
-        await paintField(scene, had, element);
+        await paintField(scene, had, element, level);
         notes.push(fieldLabel(element));
     }
     if (notes.length) await ChatMessage.create({ speaker: { alias: "Elements" }, content: `<p>The field shifts: ${notes.join(", ")}.</p>` });

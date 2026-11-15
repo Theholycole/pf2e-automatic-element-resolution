@@ -1,7 +1,7 @@
 // Hovering over a square says what's on it, for when the color isn't enough. Each viewer sees only what their client shows them, and a client setting
 // turns it off.
 
-import { MODULE_ID, escapeHTML, ruleSquaresOf, squareAt, surfacesOf } from "./foundry.js";
+import { MODULE_ID, escapeHTML, inLevel, levelOf, ruleSquaresOf, squareAt, surfacesOf } from "./foundry.js";
 import { fieldOf } from "./terrain.js";
 import { sceneFieldOf } from "./fields.js";
 import { fieldEffect } from "../src/fields.js";
@@ -12,6 +12,7 @@ const GAP = 16;
 
 let element = null;
 let squares = null;
+let squaresLevel = null;
 let current = null;
 let timer = null;
 
@@ -22,17 +23,17 @@ const hide = () => {
 };
 
 // What's on each square of the scene: a map from square to the viewer's entries. Worked out once, until a region or the scene changes.
-function buildSquares(scene) {
+function buildSquares(scene, level) {
     const map = new Map();
     const add = (key, entry) => map.set(key, [...(map.get(key) ?? []), entry]);
-    for (const surface of surfacesOf(scene)) {
+    for (const surface of surfacesOf(scene, level)) {
         const region = scene.regions.get(surface.id);
         if (!game.user.isGM && region?.visibility !== CONST.REGION_VISIBILITY.ALWAYS) continue;
         const info = surfaceInfo(surface.material, { fixed: surface.fixed });
         for (const key of surface.squares) add(key, info);
     }
     for (const region of scene.regions) {
-        if (!fieldOf(region)) continue;
+        if (!fieldOf(region) || !inLevel(region, level)) continue;
         const { name, description } = fieldEffect(fieldOf(region));
         for (const key of ruleSquaresOf(region)) add(key, { title: name, lines: [description], traits: [], reactions: [], field: true });
     }
@@ -43,7 +44,11 @@ const entryHTML = ({ title, lines, traits, reactions }) => `<h4>${escapeHTML(tit
 
 // What's on this square. (A scene-wide field is everywhere a marked one isn't.)
 function entriesAt(scene, key) {
-    squares ??= buildSquares(scene);
+    // (Each level's own: what's on the floor in view.)
+    const level = levelOf(scene);
+    if (squaresLevel !== level) squares = null;
+    squaresLevel = level;
+    squares ??= buildSquares(scene, level);
     const here = squares.get(key) ?? [];
     const field = sceneFieldOf(scene);
     if (!field || here.some((entry) => entry.field)) return here;

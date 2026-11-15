@@ -6,14 +6,14 @@
 // A card comes once for each roll and reaction. Damage marked as conducted sets off nothing.
 
 import { CONDUCTED, cardOf, dropTarget, postPlan } from "./cards.js";
-import { MODULE_ID, creatureOf, creaturesOf, damageOf, dcFrom, hazardFormula, isActiveGM, ruleSettings, sceneDC, squareAt, surfacesOf, tickSettings, writeAges } from "./foundry.js";
+import { MODULE_ID, creatureOf, creaturesOf, damageOf, dcFrom, floorOf, hasLevels, hazardFormula, isActiveGM, levelOf, ruleSettings, sceneDC, squareAt, surfacesOf, tickSettings, writeAges } from "./foundry.js";
 import { groundWeather, isSoakingRain, skySquares, syncRain } from "./environment.js";
 import { burstObject, objectOfActor, objectsIn } from "./objects.js";
 import { advanceFields } from "./fields.js";
 import { stormRound, stormFireLasts } from "./storms.js";
 import { onOilPainted } from "./terrain.js";
 import { paintSquares } from "./foundry.js";
-import { burstSquares, squareKey } from "../src/surfaces.js";
+import { burstSquares, onTop, squareKey } from "../src/surfaces.js";
 import { goesOff, setOff } from "../src/objects.js";
 import { creaturePlans, elementsFrom, leavePlan, surfacePlans } from "../src/reactions.js";
 import { rainPuddles, roundPlan, tickSurfaces } from "../src/ticks.js";
@@ -29,11 +29,11 @@ const directOf = (key, tokenId) => {
     return [...hitBy.get(key)];
 };
 
-async function postOnce(plans, scene, key) {
+async function postOnce(plans, scene, key, level = levelOf(scene)) {
     for (const plan of plans) {
         // (Two targets of one attack can each change their own square. Lightning through one body is one card, wherever it came in.)
         const once = `${key}:${plan.key}:${plan.material ?? plan.targets?.[0] ?? ""}:${plan.conducted ? "" : (plan.squares ?? []).join("|")}`;
-        if (!cardFor(once)) await postPlan(plan, scene, { from: key, once });
+        if (!cardFor(once)) await postPlan(plan, scene, { from: key, once, level });
     }
 }
 
@@ -51,8 +51,9 @@ async function react({ scene, token, elements, actor, item, key, creatureOnly = 
     const direct = directOf(key, token.id);
     const creature = creatureOf(token);
     const dc = dcFrom(actor, item) ?? sceneDC(scene);
-    if (!creatureOnly) await postOnce(surfacePlans({ source: sourceOf(actor), elements, contact: (creature.elevation ?? 0) > 0 ? [] : creature.squares, surfaces: surfacesOf(scene), creatures: creaturesOf(scene), direct, dc, hazardFormula: hazardFormula(scene), settings: ruleSettings() }), scene, key);
-    await postOnce(creaturePlans({ elements, creature, dc }), scene, `${key}:${token.id}`);
+    const level = levelOf(scene, token);
+    if (!creatureOnly) await postOnce(surfacePlans({ source: sourceOf(actor), elements, contact: (creature.elevation ?? 0) > 0 ? [] : creature.squares, surfaces: surfacesOf(scene, level), creatures: creaturesOf(scene, level), direct, dc, hazardFormula: hazardFormula(scene), settings: ruleSettings() }), scene, key);
+    await postOnce(creaturePlans({ elements, creature, dc }), scene, `${key}:${token.id}`, level);
     // (It may already be on a card from an earlier target of the same roll.)
     for (const message of recentCards()) if (cardOf(message).from === key && cardOf(message).conducted) await dropTarget(message, token.id);
 }
@@ -75,29 +76,32 @@ export async function onRegionCreated(region) {
     const origin = region.flags.pf2e.origin ?? {};
     const scene = region.parent;
     const size = scene.grid.size;
+    // (The level the area was placed on: its own, or the one in view.)
+    const level = hasLevels(scene) ? ([...(region.levels ?? [])].find((id) => scene.levels.has(id)) ?? levelOf(scene)) : null;
+    const elevation = floorOf(scene, level);
     const bounds = region.bounds ?? region.object?.bounds;
     const contact = [];
     if (bounds) {
         for (let x = Math.floor(bounds.x / size); x * size < bounds.right; x++) {
             for (let y = Math.floor(bounds.y / size); y * size < bounds.bottom; y++) {
-                if (region.testPoint({ x: (x + 0.5) * size, y: (y + 0.5) * size, elevation: 0 })) contact.push(squareAt(scene, (x + 0.5) * size, (y + 0.5) * size));
+                if (region.testPoint({ x: (x + 0.5) * size, y: (y + 0.5) * size, elevation })) contact.push(squareAt(scene, (x + 0.5) * size, (y + 0.5) * size));
             }
         }
     }
     if (origin.slug === "grease") {
-        await paintSquares(scene, contact, "oil");
+        await paintSquares(scene, contact, "oil", { level });
         await onOilPainted(scene, contact);
     }
     const all = elementsFrom({ traits: origin.traits ?? [] });
     if (!all.length) return;
     const item = origin.uuid ? await fromUuid(origin.uuid).catch(() => null) : null;
     const dc = dcFrom(item?.actor, item) ?? sceneDC(scene);
-    await postOnce(surfacePlans({ source: sourceOf(item?.actor), elements: all, contact, surfaces: surfacesOf(scene), creatures: creaturesOf(scene), dc, hazardFormula: hazardFormula(scene), settings: ruleSettings() }), scene, region.id);
+    await postOnce(surfacePlans({ source: sourceOf(item?.actor), elements: all, contact, surfaces: surfacesOf(scene, level), creatures: creaturesOf(scene, level), dc, hazardFormula: hazardFormula(scene), settings: ruleSettings() }), scene, region.id, level);
     for (const { token, object } of objectsIn(scene, contact)) if (setOff(object, all)) await burstObject(token, object);
     if (game.settings.get(MODULE_ID, "offerSurfaces")) {
         for (const { element } of all) {
-            const plan = leavePlan(origin.name ?? "The effect", element, contact, surfacesOf(scene));
-            if (plan) await postOnce([plan], scene, region.id);
+            const plan = leavePlan(origin.name ?? "The effect", element, contact, surfacesOf(scene, level));
+            if (plan) await postOnce([plan], scene, region.id, level);
         }
     }
 }
@@ -119,7 +123,7 @@ export const canvasSquare = (clientX, clientY) => {
 
 // A message's element, aimed at a square: what's there reacts. Whether anything did.
 export async function reactAtSquare(message, scene, key) {
-    const plans = surfacePlans({ source: sourceOf(message.actor), elements: messageElements(message), contact: [key], surfaces: surfacesOf(scene), creatures: creaturesOf(scene), dc: dcFrom(message.actor, message.item) ?? sceneDC(scene), hazardFormula: hazardFormula(scene), settings: ruleSettings() });
+    const plans = surfacePlans({ source: sourceOf(message.actor), elements: messageElements(message), contact: [key], surfaces: surfacesOf(scene, levelOf(scene)), creatures: creaturesOf(scene, levelOf(scene)), dc: dcFrom(message.actor, message.item) ?? sceneDC(scene), hazardFormula: hazardFormula(scene), settings: ruleSettings() });
     await postOnce(plans, scene, `${message.id}:aim:${key}`);
     return plans.length > 0;
 }
@@ -132,7 +136,7 @@ export async function onItemUsed(message) {
     // (Oil, thrown: it splashes on whoever the thrower has targeted, lit or not. Only their own client knows that.)
     if (item?.slug === "oil-1-pint" && message.isAuthor) {
         const target = [...game.user.targets][0]?.document;
-        if (target?.parent) await postOnce([{ key: "oil-splash", title: "The oil splashes", targets: [], damage: [], leave: creatureOf(target).squares, leaveMaterial: "oil" }], target.parent, message.id);
+        if (target?.parent) await postOnce([{ key: "oil-splash", title: "The oil splashes", targets: [], damage: [], leave: creatureOf(target).squares, leaveMaterial: "oil" }], target.parent, message.id, levelOf(target.parent, target));
         return;
     }
     // (Grease has no area in PF2e's data, since it can also target an object: its 4 squares start at whoever the caster targeted, or the GM paints them.)
@@ -150,18 +154,19 @@ export async function onItemUsed(message) {
     const token = item?.actor?.getActiveTokens?.(false, true)?.[0];
     if (!use || !token?.parent) return;
     const scene = token.parent;
+    const level = levelOf(scene, token);
     const creature = creatureOf(token);
     const contact = burstSquares(creature.squares, use.feet ?? 10);
     if (use.harvest) {
-        await postOnce(surfacePlans({ elements: [{ element: "wood", amount: 0 }], contact, surfaces: surfacesOf(scene), creatures: creaturesOf(scene), direct: [token.id], dc: dcFrom(item.actor, item) ?? sceneDC(scene), hazardFormula: hazardFormula(scene), settings: ruleSettings() }).filter((plan) => plan.key === "harvest"), scene, message.id);
+        await postOnce(surfacePlans({ elements: [{ element: "wood", amount: 0 }], contact, surfaces: surfacesOf(scene, level), creatures: creaturesOf(scene, level), direct: [token.id], dc: dcFrom(item.actor, item) ?? sceneDC(scene), hazardFormula: hazardFormula(scene), settings: ruleSettings() }).filter((plan) => plan.key === "harvest"), scene, message.id);
         return;
     }
-    const plan = leavePlan(item.name, use.element, contact, surfacesOf(scene));
-    if (plan) await postOnce([plan], scene, message.id);
+    const plan = leavePlan(item.name, use.element, contact, surfacesOf(scene, level));
+    if (plan) await postOnce([plan], scene, message.id, level);
 }
 
 function bareSquares(scene, surfaces) {
-    const taken = new Set(surfaces.flatMap((surface) => surface.squares));
+    const taken = new Set(onTop(surfaces).flatMap((surface) => surface.squares));
     const { sceneRect: { x, y, width, height } } = scene.dimensions;
     const size = scene.grid.size;
     const keys = [];
@@ -181,19 +186,24 @@ export async function onCombatUpdate(combat, change, options) {
     await syncRain(scene);
     await advanceFields(scene, change.round);
     await stormRound(scene, change.round);
-    const surfaces = surfacesOf(scene);
-    const weather = groundWeather(scene);
-    const puddles = isSoakingRain(scene) ? rainPuddles(bareSquares(scene, surfaces).filter((key) => skySquares(scene).has(key)), game.settings.get(MODULE_ID, "rainPuddles"), (n) => Math.floor(CONFIG.Dice.randomUniform() * n)) : null;
-    if (!surfaces.length && !puddles) return;
-    const d20 = () => Math.ceil(CONFIG.Dice.randomUniform() * 20);
-    const settings = tickSettings();
-    if (weather.hot) settings.lives.water = Math.ceil(settings.lives.water / 2);
-    const { ages, changes } = tickSurfaces(surfaces, { ...settings, d20, rain: weather.rain, wind: weather.wind, freezing: weather.freezing, fireLasts: stormFireLasts(scene) });
-    await writeAges(scene, ages);
     const stale = recentCards().filter((message) => cardOf(message).key === "round" && cardOf(message).sceneId === scene.id && !cardOf(message).done).map((message) => message.id);
     if (stale.length) await ChatMessage.deleteDocuments(stale);
-    const plan = roundPlan(puddles ? [...changes, puddles] : changes, change.round - 1);
-    if (plan) await postPlan(plan, scene);
+    // (Each level ages on its own, with a card of its own. The weather only reaches the top one: the floors under it have a roof.)
+    const levels = hasLevels(scene) ? scene.levels.contents.sort((a, b) => (Number(b.elevation.bottom) || 0) - (Number(a.elevation.bottom) || 0)).map((level) => level.id) : [null];
+    for (const [index, level] of levels.entries()) {
+        const surfaces = surfacesOf(scene, level);
+        const weather = index === 0 ? groundWeather(scene) : { rain: false, freezing: null, wind: null, hot: false };
+        const puddles = index === 0 && isSoakingRain(scene) ? rainPuddles(bareSquares(scene, surfaces).filter((key) => skySquares(scene).has(key)), game.settings.get(MODULE_ID, "rainPuddles"), (n) => Math.floor(CONFIG.Dice.randomUniform() * n)) : null;
+        if (!surfaces.length && !puddles) continue;
+        const d20 = () => Math.ceil(CONFIG.Dice.randomUniform() * 20);
+        const settings = tickSettings();
+        if (weather.hot) settings.lives.water = Math.ceil(settings.lives.water / 2);
+        const { ages, changes } = tickSurfaces(surfaces, { ...settings, d20, rain: weather.rain, wind: weather.wind, freezing: weather.freezing, fireLasts: stormFireLasts(scene) });
+        await writeAges(scene, ages);
+        const plan = roundPlan(puddles ? [...changes, puddles] : changes, change.round - 1);
+        if (plan && level) plan.title += ` (${scene.levels.get(level)?.name ?? "level"})`;
+        if (plan) await postPlan(plan, scene, { level });
+    }
 }
 
 // The roll an application came from: the latest damage message from this item, or the application itself.

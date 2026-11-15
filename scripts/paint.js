@@ -79,7 +79,8 @@ async function onUp() {
     stroke = null;
     clearPreview();
     if (picked && typeof picked === "object" && "field" in picked) return paintField(canvas.scene, [...keys], picked.field);
-    await paintSquares(canvas.scene, [...keys], clearing ? null : picked, { lasting });
+    // (Painting over the same surface clears only it, not a floor under it.)
+    await paintSquares(canvas.scene, [...keys], clearing ? null : picked, { lasting, ...(clearing ? { from: picked } : {}) });
     if (picked === "oil" && !clearing) await onOilPainted(canvas.scene, [...keys]);
 }
 

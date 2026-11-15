@@ -2,13 +2,13 @@
 // owner or the GM; the result comes back through PF2e's roll message, matched by its identifier), and the GM's Apply does the rest.
 // State in the message's flags.
 
-import { ICEBOUND_SLUG, MODULE_ID, STATE_EFFECTS, coreForcedMove, creatureOf, escapeHTML, isActiveGM, paintSquares, surfacesOf } from "./foundry.js";
+import { ICEBOUND_SLUG, MODULE_ID, STATE_EFFECTS, coreForcedMove, creatureOf, escapeHTML, isActiveGM, levelOf, paintSquares, surfacesOf } from "./foundry.js";
 import { bestStatistic, onOilPainted } from "./terrain.js";
 import { finishBurst } from "./objects.js";
 import { noteSlide } from "./carry.js";
 import { BASIC_SAVE } from "../src/reactions.js";
 import { hazardAmount } from "../src/terrain.js";
-import { SURFACES, nextTo } from "../src/surfaces.js";
+import { SURFACES, nextTo, onTop } from "../src/surfaces.js";
 
 const CARD = "card";
 export const CONDUCTED = "elements:conducted";
@@ -20,14 +20,14 @@ export const cardOf = (message) => message?.flags?.[MODULE_ID]?.[CARD] ?? null;
 const identifierOf = (messageId, targetId) => `${MODULE_ID}:${messageId}:${targetId}`;
 
 // Post a plan's card. source: the damage roll's message id it came from, and the key that stops a second card for the same thing.
-export async function postPlan(plan, scene, { from = null, once = null, fromMove = null } = {}) {
+export async function postPlan(plan, scene, { from = null, once = null, fromMove = null, level = levelOf(scene) } = {}) {
     const damage = [];
     for (const part of plan.damage ?? []) {
         if (part.formula) damage.push({ type: part.type, amount: (await new Roll(part.formula).evaluate()).total, formula: part.formula });
         else damage.push({ type: part.type, amount: part.amount });
     }
     const targets = (plan.targets ?? []).map((id) => scene.tokens.get(id)).filter((token) => token?.actor).map((token) => ({ id: token.id, tokenUuid: token.uuid, actorUuid: token.actor.uuid, name: token.name, degree: null, total: null, applied: false }));
-    const state = { key: plan.key, title: plan.title, sceneId: scene.id, from, once, fromMove, element: plan.element, damage, check: plan.check, penalties: plan.penalties ?? {}, degrees: plan.degrees ?? {}, conducted: Boolean(plan.conducted), targets, squares: plan.squares ?? [], material: plan.material ?? null, to: plan.to, add: plan.add ?? [], remove: plan.remove ?? [], notes: plan.notes ?? [], hazard: plan.hazard ?? null, putOut: Boolean(plan.putOut), changes: plan.changes ?? [], leave: plan.leave ?? [], leaveMaterial: plan.leaveMaterial ?? "water", doubled: plan.doubled ?? [], burst: plan.burst ?? null, push: plan.push ?? null, done: false };
+    const state = { level, key: plan.key, title: plan.title, sceneId: scene.id, from, once, fromMove, element: plan.element, damage, check: plan.check, penalties: plan.penalties ?? {}, degrees: plan.degrees ?? {}, conducted: Boolean(plan.conducted), targets, squares: plan.squares ?? [], material: plan.material ?? null, to: plan.to, add: plan.add ?? [], remove: plan.remove ?? [], notes: plan.notes ?? [], hazard: plan.hazard ?? null, putOut: Boolean(plan.putOut), changes: plan.changes ?? [], leave: plan.leave ?? [], leaveMaterial: plan.leaveMaterial ?? "water", doubled: plan.doubled ?? [], burst: plan.burst ?? null, push: plan.push ?? null, done: false };
     return ChatMessage.create({ content: cardHTML(state), speaker: { alias: "Elements" }, flags: { [MODULE_ID]: { [CARD]: state } } });
 }
 
@@ -156,10 +156,11 @@ export async function leaveSurface(message) {
     const state = cardOf(message);
     const scene = game.scenes.get(state.sceneId);
     if (!scene) return;
-    const taken = new Set(surfacesOf(scene).flatMap((surface) => surface.squares));
+    const level = state.level ?? undefined;
+    const taken = new Set(onTop(surfacesOf(scene, level)).flatMap((surface) => surface.squares));
     const bare = state.leave.filter((key) => !taken.has(key));
     if (bare.length) {
-        await paintSquares(scene, bare, state.leaveMaterial);
+        await paintSquares(scene, bare, state.leaveMaterial, { level });
         if (state.leaveMaterial === "oil") await onOilPainted(scene, bare);
     }
     await writeState(message, { ...state, leave: [] });
@@ -227,8 +228,11 @@ export async function releaseFromIce(scene) {
     if (!isActiveGM() || !scene) return;
     const stuck = [...scene.tokens].filter((token) => token.actor?.itemTypes?.effect?.some((item) => item.slug === ICEBOUND_SLUG));
     if (!stuck.length) return;
-    const ice = new Set(surfacesOf(scene).filter((surface) => surface.material === "ice").flatMap((surface) => surface.squares));
-    for (const token of stuck) if (!creatureOf(token).squares.some((key) => ice.has(key))) await setState(token.actor, "icebound", false);
+    const iceOf = (level) => new Set(surfacesOf(scene, level).filter((surface) => surface.material === "ice").flatMap((surface) => surface.squares));
+    for (const token of stuck) {
+        const ice = iceOf(levelOf(scene, token));
+        if (!creatureOf(token).squares.some((key) => ice.has(key))) await setState(token.actor, "icebound", false);
+    }
 }
 
 // Ice: the rest of a forced move, away from where it began.
@@ -283,8 +287,9 @@ export async function applyCard(message) {
         targets.push({ ...target, applied: true });
     }
     const scene = game.scenes.get(state.sceneId);
-    if (scene && state.to !== undefined && !state.done && state.squares?.length) await paintSquares(scene, state.squares, state.to);
-    if (scene && !state.done) for (const change of state.changes ?? []) await paintSquares(scene, change.keys, change.to);
+    const level = state.level ?? undefined;
+    if (scene && state.to !== undefined && !state.done && state.squares?.length) await paintSquares(scene, state.squares, state.to, { level, from: state.material });
+    if (scene && !state.done) for (const change of state.changes ?? []) await paintSquares(scene, change.keys, change.to, { level, from: change.material });
     for (const { actor, token } of stuck) {
         await setState(actor, "icebound", true);
         await postEscape(token, state.check?.dc);

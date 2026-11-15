@@ -1,7 +1,7 @@
 // What happens when an element touches a surface or a creature: the reaction table, and the plan for a card. All of it is homebrew; the
 // comments name the official text a row leans on. Pure: the Foundry side reads the world into plain data and carries out the plan.
 
-import { SURFACES, bodyFrom, burstSquares, movedSquares, touches } from "./surfaces.js";
+import { SURFACES, bodyFrom, burstSquares, layerOf, movedSquares, onTop, touches } from "./surfaces.js";
 import { breaksSurface } from "./matchups.js";
 
 export const DEFAULTS = { conductFraction: 0.5, conductReach: 30 };
@@ -166,7 +166,9 @@ export function surfacePlans(event) {
             if (local && reaction.notTrail) continue;
             for (const material of reaction.surfaces) {
                 // (Fixed ground, like a lake from the environment module, conducts but doesn't change.)
-                const squares = surfaces.filter((surface) => surface.material === material && (reaction.conduct || !surface.fixed)).flatMap((surface) => surface.squares);
+                // (A floor under something else is covered: water on a wood floor boils, and the floor under it doesn't burn. A cloud covers nothing.)
+                const covered = layerOf(material) === "floor" ? new Set(onTop(surfaces).filter((surface) => !SURFACES[surface.material]?.cloud).flatMap((surface) => surface.squares)) : new Set();
+                const squares = surfaces.filter((surface) => surface.material === material && (reaction.conduct || !surface.fixed)).flatMap((surface) => surface.squares).filter((key) => !covered.has(key));
                 const reach = reaction.conduct ? conductReach : Infinity;
                 const body = bodyFrom(contact, squares, reach);
                 if (!body.size) continue;
@@ -255,7 +257,7 @@ export function creaturePlans({ elements = [], creature, dc = null }) {
 // An effect's area: the card that offers to leave its element's surface on the bare squares (none: no card).
 export function leavePlan(name, element, contact, surfaces) {
     const material = LEAVES[element];
-    const taken = new Set(surfaces.flatMap((surface) => surface.squares));
+    const taken = new Set(onTop(surfaces).flatMap((surface) => surface.squares));
     const leave = contact.filter((key) => !taken.has(key));
     if (!material || !leave.length) return null;
     return { key: `leave-${element}`, element, title: element === "wood" ? `${name}: Sow` : `${name}: it could leave ${SURFACES[material].label.toLowerCase()}`, targets: [], damage: [], leave, leaveMaterial: material };
