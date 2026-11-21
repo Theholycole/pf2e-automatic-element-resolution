@@ -19,6 +19,8 @@ const fieldRules = (element) => {
     const { name, rules, description } = fieldEffect(element);
     return { material: `field-${element}`, label: name, feature: null, costs: {}, environment: [], effect: { name, rules }, balance: null, hazard: null, summary: [description] };
 };
+// A creature's senses by type: darkvision, low-light-vision and the like.
+export const sensesOf = (actor) => [...(actor?.perception?.senses ?? actor?.system?.perception?.senses ?? [])].map((sense) => sense?.type).filter(Boolean);
 export const ignoredOf = (actor) => {
     const terrain = actor?.system?.movement?.terrain;
     return { difficult: [...(terrain?.difficult?.ignored ?? [])], greater: [...(terrain?.greater?.ignored ?? [])] };
@@ -71,7 +73,7 @@ async function addInside(token, region) {
     // (Painting and the region's own enter event can arrive together: one Effect.)
     const key = `${actor.uuid}:${region.uuid}`;
     if (!rules.effect || insideEffects(actor, region).length || adding.has(key)) return;
-    const effectRules = effectRulesFor(rules, ignoredOf(actor));
+    const effectRules = effectRulesFor(rules, ignoredOf(actor), sensesOf(actor));
     if (!effectRules.length) return;
     adding.add(key);
     try {

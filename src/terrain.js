@@ -21,6 +21,11 @@ import { SURFACES, SURFACE_TRAITS } from "./surfaces.js";
 const HAZARD_DAMAGE = { plain: "1d2", burning: "1", bramble: "3d6", lava: "3d6" };
 
 const CONCEALED = "Compendium.pf2e.conditionitems.Item.DmAIPqOBomZ7H95W";
+const HIDDEN = "Compendium.pf2e.conditionitems.Item.iU0fEDdBp3rXpTMC";
+const BLINDED = "Compendium.pf2e.conditionitems.Item.XgEqL1kFApUbl5Z2";
+const grant = (uuid, extra = {}) => ({ key: "GrantItem", uuid, allowDuplicate: true, onDeleteActions: { granter: "cascade", grantee: "cascade" }, ...extra });
+// The senses that see through each kind of dark.
+const SEES_IN_DARKNESS = ["darkvision", "greater-darkvision"];
 
 const BALANCE_NOTE = "Critical success: it moves on normally. Success: it moves on, treating this as difficult terrain. Failure: it stays where it was (the action wasted). Critical failure: it stays where it was and falls prone.";
 
@@ -44,8 +49,11 @@ export function terrainRules(material, { dc = null } = {}) {
         case "mud": return fromFeature(material, "bog-shallow", dc);
         case "rubble": return fromFeature(material, "rubble", dc);
         case "oil": return { ...bare, balance: { statistics: ["reflex", "acrobatics"], dc, note: "A creature that Steps or Crawls doesn't check: skip this card." }, summary: ["Moving onto it: Reflex or Acrobatics to Balance, as Grease."] };
-        case "steam":
-        case "darkness": return { ...bare, effect: { name: `Surface: ${bare.label}`, rules: [{ key: "GrantItem", uuid: CONCEALED, allowDuplicate: true, onDeleteActions: { granter: "cascade", grantee: "cascade" } }] }, summary: ["Concealed inside it."] };
+        case "steam": return { ...bare, effect: { name: `Surface: ${bare.label}`, rules: [{ key: "GrantItem", uuid: CONCEALED, allowDuplicate: true, onDeleteActions: { granter: "cascade", grantee: "cascade" } }] }, summary: ["Concealed inside it."] };
+        // (Darkness: blinded without darkvision, and hidden; Limned can take the hidden away and leave the rest. Dim light: concealed. Who sees through them is each observer's own senses: the GM
+        // sets those aside for one with darkvision, or low-light vision in dim light.)
+        case "darkness": return { ...bare, effect: { name: "Surface: Darkness", rules: [grant(HIDDEN, { onDeleteActions: { granter: "cascade", grantee: "detach" } }), grant(BLINDED, { unlessSenses: SEES_IN_DARKNESS })] }, summary: ["Darkness: blinded inside it without darkvision, and hidden. Observers with darkvision see it normally."] };
+        case "lowlight": return { ...bare, effect: { name: "Surface: Low light", rules: [grant(CONCEALED)] }, summary: ["Dim light: concealed inside it. Observers with low-light vision or darkvision see it normally."] };
         case "burning": return { ...bare, hazard: { formula: HAZARD_DAMAGE.burning, type: "fire", persistent: "1d6", words: "burns in the flames" }, summary: ["Fire damage on entering and at the start of each turn in it, and 1d6 persistent fire."] };
         case "death": return { ...bare, hazard: { formula: HAZARD_DAMAGE.plain, type: "void", words: "withers on the deathly ground" }, summary: ["Void damage on entering and at the start of each turn in it."] };
         case "life": return { ...bare, summary: ["Heals 1 at the end of a creature's turn inside it."] };
@@ -119,4 +127,7 @@ export function hazardAmount(amount, { hits, type, traits = [] }, { weaknesses =
 export const steady = (rules, ignored) => Boolean(rules.feature) && sureFooted(rules.feature, ignored);
 
 // The Effect's rules for this creature.
-export const effectRulesFor = (rules, ignored) => (rules.effect?.rules ?? []).filter((rule) => !(rule.flag === "terrainOffGuard" && steady(rules, ignored)));
+// senses: the creature's own (darkvision, low-light vision), for what only blinds those without them.
+export const effectRulesFor = (rules, ignored, senses = []) => (rules.effect?.rules ?? [])
+    .filter((rule) => !(rule.flag === "terrainOffGuard" && steady(rules, ignored)) && !(rule.unlessSenses ?? []).some((sense) => senses.includes(sense)))
+    .map(({ unlessSenses, ...rule }) => rule);

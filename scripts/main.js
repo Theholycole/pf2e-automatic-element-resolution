@@ -61,12 +61,12 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
     bindEscape(message, html);
     bindAim(message, html);
 });
-// Limned means it can't be concealed: the condition goes as it arrives, or as Limned does.
+// Limned means it can't be concealed or hidden by the dark: the condition goes as it arrives, or as Limned does.
 Hooks.on("createItem", safely(async (item) => {
     if (!isActiveGM() || !item.parent) return;
     const limned = limnedOf(item.parent);
-    if (limned && item.slug === "concealed") await item.delete();
-    if (isLimnedItem(item)) await item.parent.itemTypes?.condition?.find((condition) => condition.slug === "concealed")?.delete();
+    if (limned && ["concealed", "hidden"].includes(item.slug)) await item.delete();
+    if (isLimnedItem(item)) for (const condition of item.parent.itemTypes?.condition?.filter((each) => ["concealed", "hidden"].includes(each.slug)) ?? []) await condition.delete();
 }));
 
 Hooks.on("getSceneControlButtons", (controls) => {

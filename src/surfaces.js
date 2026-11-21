@@ -14,6 +14,7 @@ export const SURFACES = {
     steam: { label: "Steam", color: "#d7dde2", cloud: true, drifts: true },
     darkness: { label: "Darkness", color: "#1d1a2e", cloud: true },
     light: { label: "Light", color: "#f3e7a1", cloud: true },
+    lowlight: { label: "Low light", color: "#4a4766", cloud: true },
     death: { label: "Deathly ground", color: "#54495c" },
     life: { label: "Living ground", color: "#b7e38f" },
     sand: { label: "Sand", color: "#d8c48a" },

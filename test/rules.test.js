@@ -279,7 +279,7 @@ test("new surfaces' rules", () => {
     assert.deepEqual(terrainRules("mud").costs, { walk: 2, climb: 2 });
     assert.deepEqual(terrainRules("rubble").costs, { walk: 2, climb: 2 });
     assert.deepEqual(terrainRules("thicket").costs, { walk: 3, climb: 3 });
-    assert.match(terrainRules("darkness").effect.rules[0].uuid, /DmAIPqOBomZ7H95W/);
+    assert.match(terrainRules("steam").effect.rules[0].uuid, /DmAIPqOBomZ7H95W/);
     assert.equal(terrainRules("life").effect, null);
     assert.equal(groundHealing("life", 9), 1);
     const death = hazardPlan(terrainRules("death"), { id: "t", name: "Goblin" });
@@ -650,4 +650,17 @@ test("floors: their own layer, covered by what lies on them", () => {
     assert.deepEqual(fire(["1,0"], [floor, water]), [["ignite-plants", ["1,0"]]]);
     assert.deepEqual(fire(["0,0"], [floor, { id: "s", material: "steam", squares: ["0,0"] }]).map(([key]) => key), ["ignite-plants"], "a cloud covers nothing");
     assert.deepEqual(leavePlan("Spell", "water", ["0,0", "1,0"], [floor, water]).leave, ["1,0"], "water can be left on a floor");
+});
+
+test("darkness blinds those without darkvision and hides them; low light conceals", () => {
+    const dark = terrainRules("darkness");
+    const ids = (rules) => rules.map((rule) => rule.uuid.split(".").pop());
+    assert.deepEqual(ids(effectRulesFor(dark, { difficult: [], greater: [] }, [])), ["iU0fEDdBp3rXpTMC", "XgEqL1kFApUbl5Z2"], "hidden and blinded");
+    assert.deepEqual(ids(effectRulesFor(dark, { difficult: [], greater: [] }, ["darkvision"])), ["iU0fEDdBp3rXpTMC"], "darkvision isn't blinded");
+    assert.deepEqual(ids(effectRulesFor(dark, { difficult: [], greater: [] }, ["greater-darkvision"])), ["iU0fEDdBp3rXpTMC"]);
+    assert.ok(effectRulesFor(dark, { difficult: [], greater: [] }, []).every((rule) => !("unlessSenses" in rule)), "the module's own key stays out of the Effect");
+    assert.deepEqual(ids(effectRulesFor(terrainRules("lowlight"), { difficult: [], greater: [] }, [])), ["DmAIPqOBomZ7H95W"]);
+    const on = (element, material) => surfacePlans({ elements: [{ element, amount: 0 }], contact: ["0,0"], surfaces: [{ id: "s", material, squares: ["0,0"] }], creatures: [], dc: 20 })[0];
+    assert.equal(on("light", "lowlight").to, null);
+    assert.equal(on("darkness", "lowlight").to, "darkness");
 });
