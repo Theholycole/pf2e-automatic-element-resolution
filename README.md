@@ -47,11 +47,11 @@ Air spreads fire to what can burn beside it, dries mud and clears snow. From the
 | Thicket | GM Core's heavy undergrowth: greater difficult terrain and cover |
 | Mud | GM Core's shallow bog: difficult terrain |
 | Rubble | GM Core's rubble: difficult terrain |
-| Darkness | Hidden inside it, and blinded unless it has darkvision; observers with darkvision see it normally |
-| Low light | Concealed inside it; observers with low-light vision or darkvision see it normally |
+| Darkness | Dark on the map (it sets the darkness level), so tokens without darkvision can't see into it; blinded inside it without darkvision |
+| Low light | Dim on the map; concealed inside it, and observers with low-light vision or darkvision see it normally |
 | Deathly ground | 1d2 void damage for each square entered and at each turn's start (a card each time; the undead aren't affected) |
 | Living ground | Heals 1 at the end of a creature's turn inside it; undead aren't healed |
-| Light | Limned inside it: it can't be concealed |
+| Light | Bright light on the map, one light on each square; limned inside it: it can't be concealed |
 | Sand, snow | GM Core: difficult terrain |
 | Brambles | 3d6 piercing damage for each square entered, and difficult terrain |
 | Broken glass | 1d2 piercing damage for each square entered |

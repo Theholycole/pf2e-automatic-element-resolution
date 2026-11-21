@@ -652,12 +652,12 @@ test("floors: their own layer, covered by what lies on them", () => {
     assert.deepEqual(leavePlan("Spell", "water", ["0,0", "1,0"], [floor, water]).leave, ["1,0"], "water can be left on a floor");
 });
 
-test("darkness blinds those without darkvision and hides them; low light conceals", () => {
+test("darkness blinds those without darkvision; low light conceals", () => {
     const dark = terrainRules("darkness");
     const ids = (rules) => rules.map((rule) => rule.uuid.split(".").pop());
-    assert.deepEqual(ids(effectRulesFor(dark, { difficult: [], greater: [] }, [])), ["iU0fEDdBp3rXpTMC", "XgEqL1kFApUbl5Z2"], "hidden and blinded");
-    assert.deepEqual(ids(effectRulesFor(dark, { difficult: [], greater: [] }, ["darkvision"])), ["iU0fEDdBp3rXpTMC"], "darkvision isn't blinded");
-    assert.deepEqual(ids(effectRulesFor(dark, { difficult: [], greater: [] }, ["greater-darkvision"])), ["iU0fEDdBp3rXpTMC"]);
+    assert.deepEqual(ids(effectRulesFor(dark, { difficult: [], greater: [] }, [])), ["XgEqL1kFApUbl5Z2"], "blinded; Foundry's vision hides it");
+    assert.deepEqual(ids(effectRulesFor(dark, { difficult: [], greater: [] }, ["darkvision"])), [], "darkvision isn't blinded");
+    assert.deepEqual(ids(effectRulesFor(dark, { difficult: [], greater: [] }, ["greater-darkvision"])), []);
     assert.ok(effectRulesFor(dark, { difficult: [], greater: [] }, []).every((rule) => !("unlessSenses" in rule)), "the module's own key stays out of the Effect");
     assert.deepEqual(ids(effectRulesFor(terrainRules("lowlight"), { difficult: [], greater: [] }, [])), ["DmAIPqOBomZ7H95W"]);
     const on = (element, material) => surfacePlans({ elements: [{ element, amount: 0 }], contact: ["0,0"], surfaces: [{ id: "s", material, squares: ["0,0"] }], creatures: [], dc: 20 })[0];

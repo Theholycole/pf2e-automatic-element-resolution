@@ -21,7 +21,6 @@ import { SURFACES, SURFACE_TRAITS } from "./surfaces.js";
 const HAZARD_DAMAGE = { plain: "1d2", burning: "1", bramble: "3d6", lava: "3d6" };
 
 const CONCEALED = "Compendium.pf2e.conditionitems.Item.DmAIPqOBomZ7H95W";
-const HIDDEN = "Compendium.pf2e.conditionitems.Item.iU0fEDdBp3rXpTMC";
 const BLINDED = "Compendium.pf2e.conditionitems.Item.XgEqL1kFApUbl5Z2";
 const grant = (uuid, extra = {}) => ({ key: "GrantItem", uuid, allowDuplicate: true, onDeleteActions: { granter: "cascade", grantee: "cascade" }, ...extra });
 // The senses that see through each kind of dark.
@@ -50,10 +49,10 @@ export function terrainRules(material, { dc = null } = {}) {
         case "rubble": return fromFeature(material, "rubble", dc);
         case "oil": return { ...bare, balance: { statistics: ["reflex", "acrobatics"], dc, note: "A creature that Steps or Crawls doesn't check: skip this card." }, summary: ["Moving onto it: Reflex or Acrobatics to Balance, as Grease."] };
         case "steam": return { ...bare, effect: { name: `Surface: ${bare.label}`, rules: [{ key: "GrantItem", uuid: CONCEALED, allowDuplicate: true, onDeleteActions: { granter: "cascade", grantee: "cascade" } }] }, summary: ["Concealed inside it."] };
-        // (Darkness: blinded without darkvision, and hidden; Limned can take the hidden away and leave the rest. Dim light: concealed. Who sees through them is each observer's own senses: the GM
-        // sets those aside for one with darkvision, or low-light vision in dim light.)
-        case "darkness": return { ...bare, effect: { name: "Surface: Darkness", rules: [grant(HIDDEN, { onDeleteActions: { granter: "cascade", grantee: "detach" } }), grant(BLINDED, { unlessSenses: SEES_IN_DARKNESS })] }, summary: ["Darkness: blinded inside it without darkvision, and hidden. Observers with darkvision see it normally."] };
-        case "lowlight": return { ...bare, effect: { name: "Surface: Low light", rules: [grant(CONCEALED)] }, summary: ["Dim light: concealed inside it. Observers with low-light vision or darkvision see it normally."] };
+        // (Darkness and low light are real on the map: Foundry's vision decides who sees into them, by each token's own senses. Darkness also blinds
+        // those inside without darkvision. PF2e doesn't conceal what's in dim light by itself, so low light still does.)
+        case "darkness": return { ...bare, effect: { name: "Surface: Darkness", rules: [grant(BLINDED, { unlessSenses: SEES_IN_DARKNESS })] }, summary: ["Dark on the map: those without darkvision can't see into it. Blinded inside it without darkvision."] };
+        case "lowlight": return { ...bare, effect: { name: "Surface: Low light", rules: [grant(CONCEALED)] }, summary: ["Dim on the map. Concealed inside it; observers with low-light vision or darkvision see it normally."] };
         case "burning": return { ...bare, hazard: { formula: HAZARD_DAMAGE.burning, type: "fire", persistent: "1d6", words: "burns in the flames" }, summary: ["Fire damage on entering and at the start of each turn in it, and 1d6 persistent fire."] };
         case "death": return { ...bare, hazard: { formula: HAZARD_DAMAGE.plain, type: "void", words: "withers on the deathly ground" }, summary: ["Void damage on entering and at the start of each turn in it."] };
         case "life": return { ...bare, summary: ["Heals 1 at the end of a creature's turn inside it."] };
@@ -80,7 +79,7 @@ export function terrainRules(material, { dc = null } = {}) {
         case "metalfurniture": return { ...bare, costs: { walk: 2 }, summary: ["Difficult terrain. It conducts lightning."] };
         case "twister": return { ...bare, hazard: { formula: HAZARD_DAMAGE.plain, type: "bludgeoning", words: "is caught in the twister" }, summary: ["It wanders each round while the weather lasts."] };
         case "dust": return { ...bare, effect: { name: "Surface: Dust cloud", rules: [{ key: "GrantItem", uuid: CONCEALED, allowDuplicate: true, onDeleteActions: { granter: "cascade", grantee: "cascade" } }] }, summary: ["Concealed inside it."] };
-        case "light": return { ...bare, effect: { name: "Surface: Light", rules: [{ key: "Note", selector: "ac", title: "Limned", text: "Limned in light: it can't be concealed here." }] }, summary: ["Limned inside it: it can't be concealed."] };
+        case "light": return { ...bare, effect: { name: "Surface: Light", rules: [{ key: "Note", selector: "ac", title: "Limned", text: "Limned in light: it can't be concealed here." }] }, summary: ["Bright light on the map. Limned inside it: it can't be concealed."] };
         default: return bare;
     }
 }

@@ -5,6 +5,7 @@ import { MODULE_ID, creatureOf, isActiveGM, ruleSquaresOf, surfaceMaterial, surf
 import { postPlan, stackState } from "./cards.js";
 import { syncSceneField } from "./fields.js";
 import { fieldEffect } from "../src/fields.js";
+import { darknessBehavior, removeLights, syncLights } from "./lighting.js";
 import { balancePlan, effectRulesFor, greasePlan, hazardPlan, steady, terrainRules } from "../src/terrain.js";
 import { SURFACES, touches } from "../src/surfaces.js";
 
@@ -39,6 +40,12 @@ export async function migrateSurfaces() {
         if (!surfaceMaterial(region)) continue;
         const visibility = surfaceVisibility(surfaceMaterial(region));
         if (region.visibility !== visibility) await region.update({ visibility });
+        // (Painted before they used Foundry's lighting.)
+        if (!region.behaviors.some((behavior) => behavior.type === "adjustDarknessLevel")) {
+            const missing = darknessBehavior(surfaceMaterial(region), { [MODULE_ID]: { terrain: true } });
+            if (missing.length) await region.createEmbeddedDocuments("RegionBehavior", missing);
+        }
+        await syncLights(region);
         for (const behavior of region.behaviors) {
             const costs = behavior.type === "modifyMovementCost" ? behavior.system.difficulties : null;
             if (costs && costs.walk > 1 && costs.travel !== costs.walk) await behavior.update({ "system.difficulties.travel": costs.walk });
@@ -61,9 +68,11 @@ export async function applyTerrain(region) {
     const behaviors = [
         ...(Object.keys(costs).length ? [{ type: "modifyMovementCost", name: `${rules.label}: movement`, system: { difficulties: costs }, flags }] : []),
         ...(rules.environment.length ? [{ type: "environment", name: `${rules.label}: environment`, system: { environmentTypes: rules.environment, mode: "add" }, flags }] : []),
-        ...(rules.effect || rules.balance || rules.hazard ? [{ type: "executeScript", name: `${rules.label}: events`, system: { source: SCRIPT, events: EVENTS }, flags }] : [])
+        ...(rules.effect || rules.balance || rules.hazard ? [{ type: "executeScript", name: `${rules.label}: events`, system: { source: SCRIPT, events: EVENTS }, flags }] : []),
+        ...darknessBehavior(rules.material, flags)
     ];
     if (behaviors.length) await region.createEmbeddedDocuments("RegionBehavior", behaviors);
+    await syncLights(region);
     await syncInside(region);
 }
 
@@ -114,6 +123,7 @@ export async function syncInside(region) {
 // A surface gone: nobody keeps its Effect.
 export async function onSurfaceDeleted(region) {
     if (!isActiveGM() || !(surfaceMaterial(region) || fieldOf(region))) return;
+    await removeLights(region);
     for (const token of region.parent.tokens) if (token.actor) await removeInside(token.actor, region);
     if (fieldOf(region)) await syncSceneField(region.parent);
 }

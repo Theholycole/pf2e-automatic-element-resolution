@@ -4,6 +4,7 @@
 import { SURFACES, layerOf, squareKey, squareOf } from "../src/surfaces.js";
 import { levelDC } from "../src/reactions.js";
 import { applyTerrain, syncInside } from "./terrain.js";
+import { syncLights } from "./lighting.js";
 import { cutEnvironment, environmentSurfaces } from "./environment.js";
 import { categoryDice } from "../../pf2e-resolution-core/src/environment/catalog.js";
 import { burstFormula } from "../src/objects.js";
@@ -129,6 +130,7 @@ async function writeSquares(scene, material, squares, { ages = {}, lasting = [] 
     const timing = { ages: kept.filter((key) => ages[key]).map((key) => [key, ages[key]]), lasting: lasting.filter((key) => kept.includes(key)) };
     if (region) {
         await region.update({ shapes, [`flags.${MODULE_ID}.ages`]: timing.ages, [`flags.${MODULE_ID}.lasting`]: timing.lasting });
+        await syncLights(region);
         return syncInside(region);
     }
     const [created] = await scene.createEmbeddedDocuments("Region", [{ name: `Surface: ${SURFACES[material].label}`, color: SURFACES[material].color, shapes, visibility: surfaceVisibility(material), ...levelData(scene, level), flags: { [MODULE_ID]: { [SURFACE]: material, ...timing } } }]);
